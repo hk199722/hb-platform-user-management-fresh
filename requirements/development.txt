@@ -1,0 +1,10 @@
+# Auto-generated development requirements. You might want to update them to
+# newer versions, and perhaps add another testing tool you want to use, if that
+# is the case.
+# In case you are going to update versions here, remember to also update them in
+# `.pre-commit-config.yaml` file to ensure you use the same checks everywhere.
+black==21.6b0
+mypy==0.910
+pre-commit==2.13.0
+pylint==2.8.3
+pytest==6.2.4

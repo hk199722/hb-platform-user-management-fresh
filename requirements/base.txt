@@ -1,0 +1,4 @@
+# Auto-generated project base requirements. You might want to update them to
+# newer versions, and most probably add more base dependencies here.
+pydantic[dotenv]==1.8.2
+typer==0.3.2

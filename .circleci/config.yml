@@ -1,0 +1,113 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.4.0
+
+executors:
+  docker-publisher:
+    environment:
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management-service
+    docker:
+      - image: circleci/buildpack-deps:buster
+
+jobs:
+  build:
+    docker:
+      - image: cimg/python:3.9
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 19.03.14
+      - run: docker build --ssh default --progress=plain -t $IMAGE_NAME:latest .
+      - run: docker save -o image.tar $IMAGE_NAME
+      - persist_to_workspace:
+          root: .
+          paths:
+            - image.tar
+    environment:
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management-service
+      DOCKER_BUILDKIT: 1
+      GIT_COMMIT: $CIRCLE_SHA1
+
+  test:
+    executor: docker-publisher
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - setup_remote_docker:
+          version: 19.03.14
+      - run: docker load -i /tmp/workspace/image.tar
+      - run: docker run --name app --entrypoint "pip3" $IMAGE_NAME install -r requirements/development.txt
+      - run: docker commit app app
+      - run: docker run --entrypoint "black" app --line-length=100 --check .
+      - run: docker run --entrypoint "pylint" app user_management/ tests/ --rcfile=.pylintrc
+      - run: docker run --entrypoint "mypy" app user_management/
+      - run: docker run --entrypoint "pytest" app tests --verbose
+      - store_test_results:
+          path: results
+
+  push-docker-image:
+    executor: docker-publisher
+    environment:
+      PIPELINE_NUMBER: << pipeline.number >>
+    parameters:
+      env:
+        type: string
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - setup_remote_docker
+      - run:
+          command: docker load -i /tmp/workspace/image.tar
+          name: Load image from workspace
+      - run:
+          command: |
+            docker tag $IMAGE_NAME:latest $IMAGE_NAME:$CIRCLE_SHA1
+            docker tag $IMAGE_NAME:$CIRCLE_SHA1 $IMAGE_NAME:<< parameters.env >>-$PIPELINE_NUMBER
+            docker tag $IMAGE_NAME:$CIRCLE_SHA1 $IMAGE_NAME:<< parameters.env >>
+          name: Tag image
+      - run:
+          command: echo $GSA_KEY | docker login -u _json_key --password-stdin https://eu.gcr.io
+          name: Log in to Google Container Registry
+      - run:
+          command: docker push $IMAGE_NAME
+          name: Push image
+
+workflows:
+  main:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+
+      # staging
+      - push-docker-image:
+          name: push-docker-image-staging
+          env: staging
+          requires:
+            - test
+          context:
+            - gcp-secrets
+          filters:
+            branches:
+              only: develop
+
+      # prod
+      - hold:
+          type: approval
+          requires:
+            - test
+          filters:
+            branches:
+              only: main
+      - push-docker-image:
+          name: push-docker-image-prod
+          env: prod
+          requires:
+            - hold
+          context:
+            - gcp-secrets
+          filters:
+            branches:
+              only: main

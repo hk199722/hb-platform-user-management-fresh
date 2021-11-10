@@ -1,0 +1,9 @@
+# Registry of repository files and directories to be ignored by Docker. 
+# Anything listed in this file will be excluded of the Docker image.
+.env
+.git
+docker-compose.yaml
+Dockerfile
+*ignore
+.idea
+.gitignore
