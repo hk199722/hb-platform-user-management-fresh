@@ -10,7 +10,7 @@ Hummingbird Platform users management service.
 In case you need to specify local development project settings, you can create a `.env` file in the 
 root of the project specifying them as environment variables.
 
-### Docker setup (recommended)
+### Docker setup
 
 Make sure you have [Docker](https://docs.docker.com) installed in your local machine.
 
@@ -31,23 +31,16 @@ docker run --env-file .env hb-platform-user-management <ARGUMENTS>
 
 ### Native setup
 
-To develop and run the project in native setup it is extremely recommended to use a 
-[Python virtual environment](https://docs.python.org/3/tutorial/venv.html). There is a range of
-options to create a virtual environment, but here we will describe the easiest one which is using
-the `venv` builtin module.
+To develop and run the project in native setup it is extremely recommended to use [Poetry](https://python-poetry.org/) 
+Poetry will create a virtual environment for you and install the dependencies on it:
 
-1. Type on the terminal:
+1. Install Poetry (if you don't have it yet):
    ```bash
-   python -m venv ~/.virtualenvs/hb-platform-user-management
+   pip install poetry
    ```
-2. Activate the virtual environment:
+2. Install project requirements and development requirements:
    ```bash
-   source ~/.virtualenvs/hb-platform-user-management/bin/activate
-   ```
-3. Install project requirements and development requirements:
-   ```bash
-   pip install -r requirements/base.txt
-   pip install -r requirements/development.txt
+   poetry install
    ```
 
 You can now test the basic project setup by running this command in terminal:
@@ -71,7 +64,7 @@ sure your changes get checked for style and standards before committing them to 
 
     $ pre-commit install
 
-[pre-commit](https://pre-commit.com) is installed automatically in development environment by pip.
+[pre-commit](https://pre-commit.com) is installed automatically in development environment by Poetry.
 If you are running the Docker setup, please install it with `pip` in your host machine:
 
     $ pip install pre-commit

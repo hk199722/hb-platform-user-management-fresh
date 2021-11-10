@@ -37,7 +37,7 @@ jobs:
       - setup_remote_docker:
           version: 19.03.14
       - run: docker load -i /tmp/workspace/image.tar
-      - run: docker run --name app --entrypoint "pip3" $IMAGE_NAME install -r requirements/development.txt
+      - run: docker run --name app --entrypoint "poetry" $IMAGE_NAME install
       - run: docker commit app app
       - run: docker run --entrypoint "black" app --line-length=100 --check .
       - run: docker run --entrypoint "pylint" app user_management/ tests/ --rcfile=.pylintrc
