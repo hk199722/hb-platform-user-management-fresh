@@ -11,8 +11,7 @@ def main():
 
     typer.echo(
         typer.style(
-            "\nWelcome to the auto-generated project layout for "
-            "HB Platform User Management!",
+            "\nWelcome to the auto-generated project layout for " "HB Platform User Management!",
             fg=typer.colors.WHITE,
             bold=True,
         )
