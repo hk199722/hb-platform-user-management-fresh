@@ -18,7 +18,7 @@ class Client(Base):
     __tablename__ = "client"
 
     uid = Column(UUID(as_uuid=True), server_default=func.uuid_generate_v4(), primary_key=True)
-    name = Column(String(50), nullable=False)
+    name = Column(String(50), unique=True, nullable=False)
 
     users = relationship(
         "GCPUser", secondary=client_users, back_populates="clients", cascade="all, delete"
