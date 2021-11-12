@@ -1,8 +1,11 @@
-from typing import Generator
+from typing import Generator, TypeVar
 
-from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import scoped_session, Session
 
 from user_management.core.database import db_session_factory
+
+
+DBSession = TypeVar("DBSession", scoped_session, Session)
 
 
 def get_database() -> Generator[scoped_session, None, None]:
