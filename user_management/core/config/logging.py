@@ -21,5 +21,15 @@ logging_config = {
             "propagate": False,
             "level": "DEBUG" if get_settings().debug is True else "INFO",
         },
+        "uvicorn": {
+            "handlers": ["console"],
+            "propagate": False,
+            "level": "DEBUG" if get_settings().debug is True else "INFO",
+        },
+        "gunicorn": {
+            "handlers": ["console"],
+            "propagate": False,
+            "level": "DEBUG" if get_settings().debug is True else "INFO",
+        },
     },
 }
