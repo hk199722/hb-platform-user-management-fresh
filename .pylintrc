@@ -9,7 +9,7 @@ extension-pkg-allow-list=
 # be loaded. Extensions are loading into the active Python interpreter and may
 # run arbitrary code. (This is an alternative name to extension-pkg-allow-list
 # for backward compatibility.)
-extension-pkg-whitelist=pydantic
+extension-pkg-whitelist=pydantic,psycopg2
 
 # Specify a score threshold to be exceeded before program exits with error.
 fail-under=10.0
@@ -65,14 +65,15 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=duplicate-code,
-        fixme,
-        invalid-name,
-        line-too-long,
-        missing-class-docstring,
-        missing-function-docstring,
-        missing-module-docstring,
-        too-few-public-methods,
+disable=R,C,
+        # duplicate-code,
+        # fixme,
+        # invalid-name,
+        # line-too-long,
+        # missing-class-docstring,
+        # missing-function-docstring,
+        # missing-module-docstring,
+        # too-few-public-methods,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -335,7 +336,7 @@ contextmanager-decorators=contextlib.contextmanager
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
 # expressions are accepted.
-generated-members=
+generated-members=psycopg2
 
 # Tells whether missing members accessed in mixin class should be ignored. A
 # mixin class is detected if its name ends with "mixin" (case insensitive).
@@ -362,7 +363,7 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis). It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=alembic
+ignored-modules=alembic,psycopg2
 
 # Show a hint with possible names when a member name was not found. The aspect
 # of finding the hint is based on edit distance.
