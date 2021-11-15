@@ -45,3 +45,5 @@ class ClientFarm(Base):
 
     farm_uid = Column(UUID(as_uuid=True), primary_key=True)
     client_uid = Column(UUID(as_uuid=True), ForeignKey("client.uid"))
+
+    client = relationship("Client", back_populates="farms")
