@@ -9,8 +9,8 @@ from user_management.core.database import Base
 client_users = Table(
     "client_users",
     Base.metadata,
-    Column("client_uid", ForeignKey("client.uid"), primary_key=True),
-    Column("gcp_user_uid", ForeignKey("gcp_user.uid"), primary_key=True),
+    Column("client_uid", ForeignKey("client.uid", ondelete="CASCADE"), primary_key=True),
+    Column("gcp_user_uid", ForeignKey("gcp_user.uid", ondelete="CASCADE"), primary_key=True),
 )
 
 
@@ -36,7 +36,7 @@ class GCPUser(Base):
     roles = Column(ARRAY(Integer))
 
     clients = relationship(
-        "Client", secondary=client_users, back_populates="users", cascade="all, delete"
+        "Client", secondary=client_users, back_populates="users", passive_deletes=True
     )
 
 
