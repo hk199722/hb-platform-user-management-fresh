@@ -1,3 +1,4 @@
+from pydantic import UUID4
 from sqlalchemy.orm import Session
 
 from user_management.repositories.client import ClientRepository
@@ -10,3 +11,6 @@ class ClientService:
 
     def create_client(self, client: NewClient):
         return self.client_repository.create(client)
+
+    def delete_client(self, uid: UUID4):
+        return self.client_repository.delete(_id=uid)
