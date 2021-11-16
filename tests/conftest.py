@@ -151,10 +151,9 @@ def testing_db_session(disposable_database: Connection) -> Generator[Session, No
         # created data.
         meta = MetaData()
         meta.reflect(bind=disposable_database)
+        session.expire_all()
         for table in meta.sorted_tables:
-            # session.execute(f'ALTER TABLE "{table.name}" DISABLE TRIGGER ALL;')
             session.execute(table.delete())
-            # session.execute(f'ALTER TABLE "{table.name}" ENABLE TRIGGER ALL;')
 
         session.commit()
         session.close()
