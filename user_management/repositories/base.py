@@ -101,6 +101,7 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
         """Returns a single object from a DB table, given its primary key value."""
         if entity := self.db.get(self.model, _id):
             return entity
+
         raise ResourceNotFoundError({"message": f"No {self.model_name} found with id {_id}"})
 
     def list(self, order_by: Order = None, **filters) -> List[Base]:
@@ -114,4 +115,10 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
         if hasattr(entity, "updated_at"):
             setattr(entity, "updated_at", datetime.now(timezone.utc))
         self.db.commit()
+
         return entity
+
+    def delete(self, _id: Any) -> None:
+        """Deletes a single object from a DB table, given its primary key value."""
+        entity = self.get(_id=_id)
+        self.db.delete(entity)
