@@ -61,9 +61,13 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
     def model_name(self):
         return type(self.model()).__name__.lower()
 
-    def create(self, schema: BaseModel) -> Base:
-        record = self.model(**schema.dict())
-        self.db.add(record)
+    def _persist_changes(self, schema: BaseModel):
+        """Helper method that attempts to persist changes into the database.
+
+        It handles the actual database integrity errors via the Psycopg2 connector exceptions, and
+        returns appropriate custom application exceptions that can be handled upstream by functions
+        or classes that uses `AlchemyRepository` based repositories.
+        """
         try:
             self.db.commit()
         except IntegrityError as e:
@@ -82,6 +86,10 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
 
             raise e from None
 
+    def create(self, schema: BaseModel) -> Base:
+        record = self.model(**schema.dict())
+        self.db.add(record)
+        self._persist_changes(schema=schema)
         self.db.refresh(record)
 
         return record
@@ -114,7 +122,8 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
             setattr(entity, key, val)
         if hasattr(entity, "updated_at"):
             setattr(entity, "updated_at", datetime.now(timezone.utc))
-        self.db.commit()
+
+        self._persist_changes(schema=schema)
 
         return entity
 
