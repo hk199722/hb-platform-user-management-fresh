@@ -2,7 +2,7 @@ import inspect
 import logging
 from typing import Optional
 
-from fastapi import Request
+from fastapi import Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 
@@ -32,35 +32,35 @@ class AppExceptionCase(Exception):
 class RemoteServiceError(AppExceptionCase):
     def __init__(self, context: dict = None):
         """Remote service returned a 500 error to request."""
-        status_code = 500
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         AppExceptionCase.__init__(self, status_code, context)
 
 
 class RequestError(AppExceptionCase):
     def __init__(self, context: dict = None):
         """Invalid request from user."""
-        status_code = 400
+        status_code = status.HTTP_400_BAD_REQUEST
         AppExceptionCase.__init__(self, status_code, context)
 
 
 class AuthenticationError(AppExceptionCase):
     def __init__(self, context: dict = None):
         """Item is not public and requires auth."""
-        status_code = 401
+        status_code = status.HTTP_401_UNAUTHORIZED
         AppExceptionCase.__init__(self, status_code, context)
 
 
 class ResourceNotFoundError(AppExceptionCase):
     def __init__(self, context: dict = None):
         """The resource requested by the user does not exist."""
-        status_code = 404
+        status_code = status.HTTP_404_NOT_FOUND
         AppExceptionCase.__init__(self, status_code, context)
 
 
 class ResourceConflictError(AppExceptionCase):
     def __init__(self, context: dict = None):
         """The resource the user tried to create already exists."""
-        status_code = 409
+        status_code = status.HTTP_409_CONFLICT
         AppExceptionCase.__init__(self, status_code, context)
 
 
