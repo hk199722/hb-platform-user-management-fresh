@@ -41,6 +41,15 @@ class GCPUserFactory(BaseModelFactory):
         model = GCPUser
         sqlalchemy_session_persistence = "commit"
 
+    @factory.post_generation
+    def clients(self, create, extracted):
+        if not create:
+            return
+
+        if extracted:
+            for client in extracted:
+                self.clients.append(client)  # pylint: disable=no-member
+
 
 class ClientFarmFactory(BaseModelFactory):
     farm_uid = factory.Sequence(lambda n: uuid.uuid4())
