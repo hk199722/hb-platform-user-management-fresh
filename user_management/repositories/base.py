@@ -122,3 +122,4 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
         """Deletes a single object from a DB table, given its primary key value."""
         entity = self.get(_id=_id)
         self.db.delete(entity)
+        self.db.commit()
