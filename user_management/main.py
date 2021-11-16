@@ -7,7 +7,7 @@ from starlette.exceptions import HTTPException
 
 from user_management.core.config.logging import logging_config
 from user_management.core.config.settings import get_settings
-from user_management.routers import router
+from user_management.routers.client import router as clients_router
 
 
 # Configuring Python logging.
@@ -55,7 +55,7 @@ def create_app() -> FastAPI:
         return await app_exception_handler(request, e)
 
     api_router = APIRouter()
-    api_router.include_router(router)
+    api_router.include_router(clients_router, prefix="/clients", tags=["clients"])
 
     app.include_router(api_router, prefix="/api/v1")
 
