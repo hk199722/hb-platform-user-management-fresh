@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 
@@ -13,6 +15,11 @@ router = APIRouter()
 def create_client(new_client: NewClient, db: DBSession = Depends(get_database)):
     client = ClientService(db).create_client(new_client)
     return client
+
+
+@router.get("/clients", response_model=List[Client])
+def list_clients(db: DBSession = Depends(get_database)):
+    return ClientService(db).list_clients()
 
 
 @router.patch("/clients/{uid}", response_model=Client)

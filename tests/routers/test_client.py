@@ -26,6 +26,16 @@ def test_create_client(test_client, test_db_session, sql_factory, client_name, e
         assert client.name == client_name
 
 
+def test_list_clients(test_client, sql_factory):
+    clients = sql_factory.client.create_batch(size=3)
+
+    response = test_client.get("/api/v1/clients")
+
+    assert response.status_code == status.HTTP_200_OK
+    expected = [{"name": client.name, "uid": str(client.uid)} for client in clients]
+    assert response.json() == expected
+
+
 @pytest.mark.parametrize(
     ["client_uid", "expected_status"],
     [

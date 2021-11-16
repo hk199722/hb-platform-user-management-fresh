@@ -12,6 +12,9 @@ class ClientService:
     def create_client(self, client: NewClient):
         return self.client_repository.create(schema=client)
 
+    def list_clients(self):
+        return self.client_repository.list()
+
     def update_client(self, uid: UUID4, client: NewClient):
         return self.client_repository.update(_id=uid, schema=client)
 
