@@ -9,18 +9,18 @@ class NamedModel(BaseModel):
         return value if value != "" else None
 
 
-class Client(NamedModel):
+class ClientSchema(NamedModel):
     uid: UUID4
 
     class Config:
         orm_mode = True
 
 
-class NewClient(NamedModel):
+class NewClientSchema(NamedModel):
     pass
 
 
-class GCPUser(NamedModel):
+class GCPUserSchema(NamedModel):
     uid: UUID4
     email: EmailStr
     phone_number: str
@@ -30,7 +30,7 @@ class GCPUser(NamedModel):
         orm_mode = True
 
 
-class ClientFarm(BaseModel):
+class ClientFarmSchema(BaseModel):
     farm_uid: UUID4
     client_uid: UUID4
 
