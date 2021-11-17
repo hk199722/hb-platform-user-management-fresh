@@ -13,8 +13,7 @@ router = APIRouter()
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=ClientSchema)
 def create_client(new_client: NewClientSchema, db: DBSession = Depends(get_database)):
-    client = ClientService(db).create_client(new_client)
-    return client
+    return ClientService(db).create_client(new_client)
 
 
 @router.get("", response_model=List[ClientSchema])
@@ -24,8 +23,7 @@ def list_clients(db: DBSession = Depends(get_database)):
 
 @router.patch("/{uid}", response_model=ClientSchema)
 def update_client(uid: UUID4, client: NewClientSchema, db: DBSession = Depends(get_database)):
-    client = ClientService(db).update_client(uid=uid, client=client)
-    return client
+    return ClientService(db).update_client(uid=uid, client=client)
 
 
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
