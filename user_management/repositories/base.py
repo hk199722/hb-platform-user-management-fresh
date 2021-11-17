@@ -18,7 +18,7 @@ from user_management.core.exceptions import ResourceConflictError, ResourceNotFo
 # Type to return Pydantic model instances from the repository.
 Schema = TypeVar("Schema", bound="BaseModel")
 
-pattern = re.compile(r'.*Key (.*) is not present in table "(.*)".', flags=re.DOTALL)
+PATTERN = re.compile(r'.*Key (.*) is not present in table "(.*)".', flags=re.DOTALL)
 
 
 class Order(NamedTuple):
@@ -91,7 +91,7 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
                 ) from UniqueViolation
             if isinstance(e.__cause__, ForeignKeyViolation):
                 # SQLAlchemy exceptions give too much detail about the infrastructure
-                match = pattern.search(str(e.__cause__))
+                match = PATTERN.search(str(e.__cause__))
                 if match is not None:
                     values, table = match.groups()
                     raise ResourceNotFoundError(
