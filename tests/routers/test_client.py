@@ -54,7 +54,6 @@ def test_delete_client(test_client, test_db_session, sql_factory, client_uid, ex
     if expected_status == status.HTTP_204_NO_CONTENT:
         # Check response status and that client users have been deleted.
         assert response.status_code == expected_status
-        test_db_session.expire_all()
         assert test_db_session.scalar(select(func.count()).select_from(Client)) == 0
         assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
 
@@ -82,6 +81,5 @@ def test_update_client(
     if expected_status == status.HTTP_200_OK:
         assert response.json().get("name") == new_name
 
-        test_db_session.expire_all()
         modified_client = test_db_session.get(Client, client_uid)
         assert modified_client.name == new_name
