@@ -38,10 +38,16 @@ class MetaAlchemyRepository(type):
     """
 
     def __new__(mcs, name, bases, class_dict):
-        model = class_dict.get("model")
-        if model is not None:
+        if bases:
+            model = class_dict.get("model")
+            assert model is not None, "`model` attribute must be set."
             if not issubclass(model, Base):
                 raise TypeError("`model` attribute must be a SQLAlchemy model.")
+
+            schema = class_dict.get("schema")
+            assert schema is not None, "`schema` attribute must be set."
+            if not issubclass(schema, BaseModel):
+                raise TypeError("`schema` attribute must be a Pydantic model.")
 
         return type.__new__(mcs, name, bases, class_dict)
 
@@ -53,6 +59,7 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
     """
 
     model: Type[Base]
+    schema: Type[BaseModel]
 
     def __init__(self, db: Session):
         self.db = db
