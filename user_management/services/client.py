@@ -18,7 +18,7 @@ class ClientService:
         return self.client_repository.list()
 
     def update_client(self, uid: UUID4, client: NewClientSchema) -> ClientSchema:
-        return self.client_repository.update(_id=uid, schema=client)
+        return self.client_repository.update(pk=uid, schema=client)
 
     def delete_client(self, uid: UUID4) -> None:
-        return self.client_repository.delete(_id=uid)
+        return self.client_repository.delete(pk=uid)

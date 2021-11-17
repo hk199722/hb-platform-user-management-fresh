@@ -110,11 +110,11 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
 
         return query
 
-    def _select_from_db(self, _id: Any) -> Base:
-        if entity := self.db.get(self.model, _id):
+    def _select_from_db(self, pk: Any) -> Base:
+        if entity := self.db.get(self.model, pk):
             return entity
 
-        raise ResourceNotFoundError({"message": f"No {self.model_name} found with id {_id}"})
+        raise ResourceNotFoundError({"message": f"No {self.model_name} found with id {pk}"})
 
     def _response(self, entity: Base) -> Schema:
         values = {key: getattr(entity, key) for key in self.properties.keys()}
@@ -128,9 +128,9 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
 
         return self._response(entity)
 
-    def get(self, _id: Any) -> Schema:
+    def get(self, pk: Any) -> Schema:
         """Returns a single object from a DB table, given its primary key value."""
-        entity = self._select_from_db(_id=_id)
+        entity = self._select_from_db(pk=pk)
         return self._response(entity)
 
     def list(self, order_by: Order = None, **filters) -> List[Schema]:
@@ -138,9 +138,9 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
         results = self.db.execute(self._filter_and_order(order=order_by, **filters)).scalars().all()
         return [self._response(entity) for entity in results]
 
-    def update(self, _id: Any, schema: BaseModel) -> Schema:
+    def update(self, pk: Any, schema: BaseModel) -> Schema:
         """Updates a single object from a DB table, given its primary key value."""
-        entity = self._select_from_db(_id=_id)
+        entity = self._select_from_db(pk=pk)
         for key, val in schema.dict().items():
             setattr(entity, key, val)
         if hasattr(entity, "updated_at"):
@@ -150,8 +150,8 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
 
         return self._response(entity)
 
-    def delete(self, _id: Any) -> None:
+    def delete(self, pk: Any) -> None:
         """Deletes a single object from a DB table, given its primary key value."""
-        entity = self._select_from_db(_id=_id)
+        entity = self._select_from_db(pk=pk)
         self.db.delete(entity)
         self.db.commit()
