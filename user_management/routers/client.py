@@ -16,6 +16,11 @@ def create_client(new_client: NewClientSchema, db: DBSession = Depends(get_datab
     return ClientService(db).create_client(new_client)
 
 
+@router.get("/{uid}", response_model=ClientSchema)
+def get_client(uid: UUID4, db: DBSession = Depends(get_database)):
+    return ClientService(db).get_client(uid=uid)
+
+
 @router.get("", response_model=List[ClientSchema])
 def list_clients(db: DBSession = Depends(get_database)):
     return ClientService(db).list_clients()

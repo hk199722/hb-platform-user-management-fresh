@@ -14,6 +14,9 @@ class ClientService:
     def create_client(self, client: NewClientSchema) -> ClientSchema:
         return self.client_repository.create(schema=client)
 
+    def get_client(self, uid: UUID4) -> ClientSchema:
+        return self.client_repository.get(pk=uid)
+
     def list_clients(self) -> List[ClientSchema]:
         return self.client_repository.list()
 
