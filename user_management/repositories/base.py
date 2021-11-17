@@ -69,7 +69,7 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
 
         # Get data model properties from Pydantic schema.
         self.properties = self.schema.schema().get("properties", {})
-        assert bool(self.properties), "`schema` must "
+        assert bool(self.properties), "`schema` must not be empty."
 
     @property
     def model_name(self):
