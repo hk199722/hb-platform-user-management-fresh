@@ -10,7 +10,7 @@ from alembic import context
 
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from user_management import models
+from user_management import models  # NOQA
 from user_management.core.config.settings import get_settings
 from user_management.core.database import Base
 
@@ -24,7 +24,7 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+fileConfig(config.config_file_name)  # type: ignore
 
 # add your model's MetaData object here
 # for 'autogenerate' support
