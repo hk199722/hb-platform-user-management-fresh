@@ -29,3 +29,8 @@ def list_gcp_users(db: DBSession = Depends(get_database)):
 @router.post("/{uid}", response_model=GCPUserSchema)
 def update_gcp_user(uid: UUID4, gcp_user: NewGCPUserSchema, db: DBSession = Depends(get_database)):
     return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user)
+
+
+@router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_gcp_user(uid: UUID4, db: DBSession = Depends(get_database)):
+    return GCPUserService(db).delete_gcp_user(uid=uid)

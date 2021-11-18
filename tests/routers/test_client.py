@@ -70,8 +70,7 @@ def test_delete_client(test_client, test_db_session, sql_factory, client_uid, ex
 
     assert response.status_code == expected_status
     if expected_status == status.HTTP_204_NO_CONTENT:
-        # Check response status and that client users have been deleted.
-        assert response.status_code == expected_status
+        # Check that client users have been deleted.
         assert test_db_session.scalar(select(func.count()).select_from(Client)) == 0
         assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
 

@@ -24,3 +24,6 @@ class GCPUserService:
 
     def update_gcp_user(self, uid: UUID4, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
         return self.gcp_user_repository.update(pk=uid, schema=gcp_user)
+
+    def delete_gcp_user(self, uid: UUID4) -> None:
+        return self.gcp_user_repository.delete(pk=uid)

@@ -1,8 +1,9 @@
 import pytest
 
 from fastapi import status
+from sqlalchemy import func, select
 
-from user_management.models import GCPUser
+from user_management.models import Client, GCPUser
 
 
 @pytest.mark.parametrize(
@@ -154,3 +155,31 @@ def test_update_gcp_user(
         assert modified_user.name == user_name
         assert modified_user.email == user_email
         assert modified_user.phone_number == user_phone
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "expected_status"],
+    [
+        # Non-existent user UID.
+        pytest.param("a0723fb5-6b0f-45ec-a131-6a6a1bd87741", status.HTTP_404_NOT_FOUND),
+        # Successful deletion.
+        pytest.param("d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc", status.HTTP_204_NO_CONTENT),
+    ],
+)
+def test_delete_gcp_user(test_client, test_db_session, sql_factory, user_uid, expected_status):
+    client = sql_factory.client.create()
+    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc", clients=[client])
+    test_db_session.commit()
+
+    response = test_client.delete(f"/api/v1/users/{user_uid}")
+
+    assert response.status_code == expected_status
+    if response.status_code == status.HTTP_204_NO_CONTENT:
+        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
+        # Check that user Client is still there.
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(Client).filter_by(uid=client.uid)
+            )
+            == 1
+        )
