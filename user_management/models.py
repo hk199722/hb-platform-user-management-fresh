@@ -31,7 +31,7 @@ class GCPUser(Base):
 
     uid = Column(UUID(as_uuid=True), server_default=func.uuid_generate_v4(), primary_key=True)
     name = Column(String(50), nullable=False)
-    email = Column(String(150), nullable=False)
+    email = Column(String(150), nullable=False, unique=True)
     phone_number = Column(String(50))
     roles = Column(ARRAY(Integer))
 
