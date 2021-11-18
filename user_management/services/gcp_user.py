@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession
@@ -16,3 +18,6 @@ class GCPUserService:
 
     def get_gcp_user(self, uid: UUID4) -> GCPUserSchema:
         return self.gcp_user_repository.get(pk=uid)
+
+    def list_gcp_users(self) -> List[GCPUserSchema]:
+        return self.gcp_user_repository.list()

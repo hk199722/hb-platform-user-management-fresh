@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 
@@ -17,3 +19,8 @@ def create_gcp_user(new_gcp_user: NewGCPUserSchema, db: DBSession = Depends(get_
 @router.get("/{uid}", response_model=GCPUserSchema)
 def get_gcp_user(uid: UUID4, db: DBSession = Depends(get_database)):
     return GCPUserService(db).get_gcp_user(uid=uid)
+
+
+@router.get("", response_model=List[GCPUserSchema])
+def list_gcp_users(db: DBSession = Depends(get_database)):
+    return GCPUserService(db).list_gcp_users()

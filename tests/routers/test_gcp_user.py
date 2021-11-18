@@ -65,3 +65,21 @@ def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
             "phone_number": gcp_user.phone_number,
         }
         assert response.json() == expected
+
+
+def test_list_gcp_users(test_client, sql_factory):
+    gcp_users = sql_factory.gcp_user.create_batch(size=3)
+
+    response = test_client.get("/api/v1/users")
+
+    assert response.status_code == status.HTTP_200_OK
+    expected = [
+        {
+            "uid": str(gcp_user.uid),
+            "name": gcp_user.name,
+            "email": gcp_user.email,
+            "phone_number": gcp_user.phone_number,
+        }
+        for gcp_user in gcp_users
+    ]
+    assert response.json() == expected
