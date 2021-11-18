@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database
 from user_management.schemas import GCPUserSchema, NewGCPUserSchema
@@ -11,3 +12,8 @@ router = APIRouter()
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=GCPUserSchema)
 def create_gcp_user(new_gcp_user: NewGCPUserSchema, db: DBSession = Depends(get_database)):
     return GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user)
+
+
+@router.get("/{uid}", response_model=GCPUserSchema)
+def get_gcp_user(uid: UUID4, db: DBSession = Depends(get_database)):
+    return GCPUserService(db).get_gcp_user(uid=uid)

@@ -42,3 +42,26 @@ def test_create_client(
         assert gcp_user.name == user_name
         assert gcp_user.email == user_email
         assert gcp_user.phone_number == user_phone
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "expected_status"],
+    [
+        pytest.param("d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc", status.HTTP_200_OK),
+        pytest.param("47294de0-8999-49c1-add4-6f8ac833ea6d", status.HTTP_404_NOT_FOUND),
+    ],
+)
+def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+
+    response = test_client.get(f"/api/v1/users/{user_uid}")
+
+    assert response.status_code == expected_status
+    if response.status_code == status.HTTP_200_OK:
+        expected = {
+            "uid": str(gcp_user.uid),
+            "name": gcp_user.name,
+            "email": gcp_user.email,
+            "phone_number": gcp_user.phone_number,
+        }
+        assert response.json() == expected
