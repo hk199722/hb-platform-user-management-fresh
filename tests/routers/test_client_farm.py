@@ -45,3 +45,21 @@ def test_create_client_farm(
     if response.status_code == status.HTTP_201_CREATED:
         client_farm = test_db_session.get(ClientFarm, farm_uid)
         assert str(client_farm.client_uid) == client_uid
+
+
+@pytest.mark.parametrize(
+    ["farm_uid", "expected_status"],
+    [
+        pytest.param("4f8b2788-ae34-4a39-9d89-29f076303dcc", status.HTTP_200_OK),
+        pytest.param(str(uuid.uuid4()), status.HTTP_404_NOT_FOUND),
+    ],
+)
+def test_get_client(test_client, sql_factory, farm_uid, expected_status):
+    client_farm = sql_factory.client_farm.create(farm_uid="4f8b2788-ae34-4a39-9d89-29f076303dcc")
+
+    response = test_client.get(f"/api/v1/client-farms/{farm_uid}")
+
+    assert response.status_code == expected_status
+    if response.status_code == status.HTTP_200_OK:
+        expected = {"client_uid": str(client_farm.client_uid), "farm_uid": str(farm_uid)}
+        assert response.json() == expected

@@ -1,3 +1,5 @@
+from pydantic import UUID4
+
 from user_management.core.dependencies import DBSession
 from user_management.repositories.client_farm import ClientFarmRepository
 from user_management.schemas import ClientFarmSchema
@@ -9,3 +11,6 @@ class ClientFarmService:
 
     def create_client_farm(self, client_farm: ClientFarmSchema) -> ClientFarmSchema:
         return self.client_farm_repository.create(schema=client_farm)
+
+    def get_client_farm(self, farm_uid: UUID4) -> ClientFarmSchema:
+        return self.client_farm_repository.get(pk=farm_uid)
