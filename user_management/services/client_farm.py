@@ -19,3 +19,6 @@ class ClientFarmService:
 
     def list_client_farms(self) -> List[ClientFarmSchema]:
         return self.client_farm_repository.list()
+
+    def delete_client_farm(self, farm_uid: UUID4) -> None:
+        return self.client_farm_repository.delete(pk=farm_uid)

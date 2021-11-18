@@ -27,3 +27,8 @@ def list_client_farms(db: DBSession = Depends(get_database)):
     # If it's an HB STAFF USER, return all client farms. If it's not, filter results by user's
     # Client.
     return ClientFarmService(db).list_client_farms()
+
+
+@router.delete("/{farm_uid}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_client_farm(farm_uid: UUID4, db: DBSession = Depends(get_database)):
+    return ClientFarmService(db).delete_client_farm(farm_uid=farm_uid)
