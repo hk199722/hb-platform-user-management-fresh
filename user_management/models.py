@@ -44,6 +44,6 @@ class ClientFarm(Base):
     __tablename__ = "client_farm"
 
     farm_uid = Column(UUID(as_uuid=True), primary_key=True)
-    client_uid = Column(UUID(as_uuid=True), ForeignKey("client.uid"))
+    client_uid = Column(UUID(as_uuid=True), ForeignKey("client.uid", ondelete="CASCADE"))
 
     client = relationship("Client", back_populates="farms")
