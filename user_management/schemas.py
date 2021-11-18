@@ -30,6 +30,15 @@ class GCPUserSchema(NamedModel):
         orm_mode = True
 
 
+class NewGCPUserSchema(NamedModel):
+    email: EmailStr
+    phone_number: str
+    # TODO: roles
+
+    class Config:
+        orm_mode = True
+
+
 class ClientFarmSchema(BaseModel):
     farm_uid: UUID4
     client_uid: UUID4
