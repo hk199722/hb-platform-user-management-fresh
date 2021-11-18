@@ -1,6 +1,6 @@
 import re
 from datetime import datetime, timezone
-from typing import Any, List, NamedTuple, Type
+from typing import Any, Generic, List, NamedTuple, Type, TypeVar
 
 from psycopg2.errors import (  # pylint: disable=no-name-in-module
     ForeignKeyViolation,
@@ -15,7 +15,10 @@ from user_management.core.database import Base
 from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
 
 
-pattern = re.compile(r'.*Key (.*) is not present in table "(.*)".', flags=re.DOTALL)
+# Type to return Pydantic model instances from the repository.
+Schema = TypeVar("Schema", bound="BaseModel")
+
+PATTERN = re.compile(r'.*Key (.*) is not present in table "(.*)".', flags=re.DOTALL)
 
 
 class Order(NamedTuple):
@@ -38,32 +41,47 @@ class MetaAlchemyRepository(type):
     """
 
     def __new__(mcs, name, bases, class_dict):
-        model = class_dict.get("model")
-        if model is not None:
+        if bases and name != "AlchemyRepository":
+            model = class_dict.get("model")
+            assert model is not None, "`model` attribute must be set."
             if not issubclass(model, Base):
                 raise TypeError("`model` attribute must be a SQLAlchemy model.")
+
+            schema = class_dict.get("schema")
+            assert schema is not None, "`schema` attribute must be set."
+            if not issubclass(schema, BaseModel):
+                raise TypeError("`schema` attribute must be a Pydantic model.")
 
         return type.__new__(mcs, name, bases, class_dict)
 
 
-class AlchemyRepository(metaclass=MetaAlchemyRepository):
+class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
     """
     Repository class to be used with SQLAlchemy ORM models. Implements convenience basic CRUD
     methods for DB access. Can be extended with more specific methods if needed.
     """
 
     model: Type[Base]
+    schema: Type[Schema]
 
     def __init__(self, db: Session):
         self.db = db
+
+        # Get data model properties from Pydantic schema.
+        self.properties = self.schema.schema().get("properties", {})
+        assert bool(self.properties), "`schema` must not be empty."
 
     @property
     def model_name(self):
         return type(self.model()).__name__.lower()
 
-    def create(self, schema: BaseModel) -> Base:
-        record = self.model(**schema.dict())
-        self.db.add(record)
+    def _persist_changes(self, schema: BaseModel):
+        """Helper method that attempts to persist changes into the database.
+
+        It handles the actual database integrity errors via the Psycopg2 connector exceptions, and
+        returns appropriate custom application exceptions that can be handled upstream by functions
+        or classes that uses `AlchemyRepository` based repositories.
+        """
         try:
             self.db.commit()
         except IntegrityError as e:
@@ -73,7 +91,7 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
                 ) from UniqueViolation
             if isinstance(e.__cause__, ForeignKeyViolation):
                 # SQLAlchemy exceptions give too much detail about the infrastructure
-                match = pattern.search(str(e.__cause__))
+                match = PATTERN.search(str(e.__cause__))
                 if match is not None:
                     values, table = match.groups()
                     raise ResourceNotFoundError(
@@ -82,44 +100,58 @@ class AlchemyRepository(metaclass=MetaAlchemyRepository):
 
             raise e from None
 
-        self.db.refresh(record)
-
-        return record
-
     def _filter_and_order(self, order: Order = None, **kwargs) -> Query:
         query = select(self.model)
 
         if kwargs:
             query = query.filter_by(**kwargs)
-
         if order:
             query = query.order_by(getattr(getattr(self.model, order.column), order.direction)())
 
         return query
 
-    def get(self, _id: Any) -> Base:
-        """Returns a single object from a DB table, given its primary key value."""
-        if entity := self.db.get(self.model, _id):
+    def _select_from_db(self, pk: Any) -> Base:
+        if entity := self.db.get(self.model, pk):
             return entity
 
-        raise ResourceNotFoundError({"message": f"No {self.model_name} found with id {_id}"})
+        raise ResourceNotFoundError({"message": f"No {self.model_name} found with id {pk}"})
 
-    def list(self, order_by: Order = None, **filters) -> List[Base]:
+    def _response(self, entity: Base) -> Schema:
+        values = {key: getattr(entity, key) for key in self.properties.keys()}
+        return self.schema(**values)
+
+    def create(self, schema: BaseModel) -> Schema:
+        entity = self.model(**schema.dict())
+        self.db.add(entity)
+        self._persist_changes(schema=schema)
+        self.db.refresh(entity)
+
+        return self._response(entity)
+
+    def get(self, pk: Any) -> Schema:
+        """Returns a single object from a DB table, given its primary key value."""
+        entity = self._select_from_db(pk=pk)
+        return self._response(entity)
+
+    def list(self, order_by: Order = None, **filters) -> List[Schema]:
         """Lists all the objects for the given filter and order"""
-        return self.db.execute(self._filter_and_order(order=order_by, **filters)).scalars().all()
+        results = self.db.execute(self._filter_and_order(order=order_by, **filters)).scalars().all()
+        return [self._response(entity) for entity in results]
 
-    def update(self, _id: Any, schema: BaseModel) -> Base:
-        entity = self.get(_id)
+    def update(self, pk: Any, schema: BaseModel) -> Schema:
+        """Updates a single object from a DB table, given its primary key value."""
+        entity = self._select_from_db(pk=pk)
         for key, val in schema.dict().items():
             setattr(entity, key, val)
         if hasattr(entity, "updated_at"):
             setattr(entity, "updated_at", datetime.now(timezone.utc))
-        self.db.commit()
 
-        return entity
+        self._persist_changes(schema=schema)
 
-    def delete(self, _id: Any) -> None:
+        return self._response(entity)
+
+    def delete(self, pk: Any) -> None:
         """Deletes a single object from a DB table, given its primary key value."""
-        entity = self.get(_id=_id)
+        entity = self._select_from_db(pk=pk)
         self.db.delete(entity)
         self.db.commit()
