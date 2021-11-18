@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 
@@ -17,3 +19,11 @@ def create_client_farm(new_client_farm: ClientFarmSchema, db: DBSession = Depend
 @router.get("/{farm_uid}", response_model=ClientFarmSchema)
 def get_client_farm(farm_uid: UUID4, db: DBSession = Depends(get_database)):
     return ClientFarmService(db).get_client_farm(farm_uid=farm_uid)
+
+
+@router.get("", response_model=List[ClientFarmSchema])
+def list_client_farms(db: DBSession = Depends(get_database)):
+    # TODO: Once authentication is in place, check that the user is an HB STAFF USER.
+    # If it's an HB STAFF USER, return all client farms. If it's not, filter results by user's
+    # Client.
+    return ClientFarmService(db).list_client_farms()

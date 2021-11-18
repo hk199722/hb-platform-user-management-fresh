@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession
@@ -14,3 +16,6 @@ class ClientFarmService:
 
     def get_client_farm(self, farm_uid: UUID4) -> ClientFarmSchema:
         return self.client_farm_repository.get(pk=farm_uid)
+
+    def list_client_farms(self) -> List[ClientFarmSchema]:
+        return self.client_farm_repository.list()

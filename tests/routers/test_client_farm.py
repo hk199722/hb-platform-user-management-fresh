@@ -54,7 +54,7 @@ def test_create_client_farm(
         pytest.param(str(uuid.uuid4()), status.HTTP_404_NOT_FOUND),
     ],
 )
-def test_get_client(test_client, sql_factory, farm_uid, expected_status):
+def test_get_client_farm(test_client, sql_factory, farm_uid, expected_status):
     client_farm = sql_factory.client_farm.create(farm_uid="4f8b2788-ae34-4a39-9d89-29f076303dcc")
 
     response = test_client.get(f"/api/v1/client-farms/{farm_uid}")
@@ -63,3 +63,16 @@ def test_get_client(test_client, sql_factory, farm_uid, expected_status):
     if response.status_code == status.HTTP_200_OK:
         expected = {"client_uid": str(client_farm.client_uid), "farm_uid": str(farm_uid)}
         assert response.json() == expected
+
+
+def test_list_client_farms(test_client, sql_factory):
+    client_farms = sql_factory.client_farm.create_batch(size=3)
+
+    response = test_client.get("/api/v1/client-farms")
+
+    assert response.status_code == status.HTTP_200_OK
+    expected = [
+        {"client_uid": str(client_farm.client_uid), "farm_uid": str(client_farm.farm_uid)}
+        for client_farm in client_farms
+    ]
+    assert response.json() == expected
