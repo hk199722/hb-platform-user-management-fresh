@@ -1,14 +1,14 @@
 from typing import List
 
 from pydantic import UUID4
-from sqlalchemy.orm import Session
 
+from user_management.core.dependencies import DBSession
 from user_management.repositories.client import ClientRepository
 from user_management.schemas import ClientSchema, NewClientSchema
 
 
 class ClientService:
-    def __init__(self, db: Session):
+    def __init__(self, db: DBSession):
         self.client_repository = ClientRepository(db)
 
     def create_client(self, client: NewClientSchema) -> ClientSchema:
