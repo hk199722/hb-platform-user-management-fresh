@@ -21,3 +21,6 @@ class GCPUserService:
 
     def list_gcp_users(self) -> List[GCPUserSchema]:
         return self.gcp_user_repository.list()
+
+    def update_gcp_user(self, uid: UUID4, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
+        return self.gcp_user_repository.update(pk=uid, schema=gcp_user)

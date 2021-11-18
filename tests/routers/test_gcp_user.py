@@ -83,3 +83,74 @@ def test_list_gcp_users(test_client, sql_factory):
         for gcp_user in gcp_users
     ]
     assert response.json() == expected
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "user_name", "user_email", "user_phone", "expected_status"],
+    [
+        # Non-existent user UID.
+        pytest.param(
+            "a0723fb5-6b0f-45ec-a131-6a6a1bd87741",
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_404_NOT_FOUND,
+        ),
+        # No user email.
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "John Doe",
+            "",
+            "+4402081232389",
+            status.HTTP_400_BAD_REQUEST,
+        ),
+        # No user name.
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_400_BAD_REQUEST,
+        ),
+        # Duplicating existent user email.
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_409_CONFLICT,
+        ),
+        # Successful user update.
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_200_OK,
+        ),
+    ],
+)
+def test_update_gcp_user(
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_uid,
+    user_name,
+    user_email,
+    user_phone,
+    expected_status,
+):
+    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
+
+    response = test_client.post(
+        f"/api/v1/users/{user_uid}",
+        json={"name": user_name, "email": user_email, "phone_number": user_phone},
+    )
+
+    assert response.status_code == expected_status
+    if response.status_code == status.HTTP_200_OK:
+        modified_user = test_db_session.get(GCPUser, user_uid)
+        assert modified_user.name == user_name
+        assert modified_user.email == user_email
+        assert modified_user.phone_number == user_phone

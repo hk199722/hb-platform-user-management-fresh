@@ -24,3 +24,8 @@ def get_gcp_user(uid: UUID4, db: DBSession = Depends(get_database)):
 @router.get("", response_model=List[GCPUserSchema])
 def list_gcp_users(db: DBSession = Depends(get_database)):
     return GCPUserService(db).list_gcp_users()
+
+
+@router.post("/{uid}", response_model=GCPUserSchema)
+def update_gcp_user(uid: UUID4, gcp_user: NewGCPUserSchema, db: DBSession = Depends(get_database)):
+    return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user)
