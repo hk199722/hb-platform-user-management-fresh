@@ -9,9 +9,13 @@ from user_management.models import Client, GCPUser
 @pytest.mark.parametrize(
     ["client_name", "expected_status"],
     [
-        pytest.param("", status.HTTP_400_BAD_REQUEST),
-        pytest.param("VASS Logic Ltd.", status.HTTP_409_CONFLICT),
-        pytest.param("New Client", status.HTTP_201_CREATED),
+        pytest.param("", status.HTTP_400_BAD_REQUEST, id="Wrong client creation - No name"),
+        pytest.param(
+            "VASS Logic Ltd.",
+            status.HTTP_409_CONFLICT,
+            id="Wrong client creation - Duplicated name",
+        ),
+        pytest.param("New Client", status.HTTP_201_CREATED, id="Successful client creation"),
     ],
 )
 def test_create_client(test_client, test_db_session, sql_factory, client_name, expected_status):
@@ -29,8 +33,16 @@ def test_create_client(test_client, test_db_session, sql_factory, client_name, e
 @pytest.mark.parametrize(
     ["client_uid", "expected_status"],
     [
-        pytest.param("ac2ef360-0002-4a8b-bf9b-84b7cf779960", status.HTTP_200_OK),
-        pytest.param("e72957e6-df6e-476b-af93-a1ae4610e72b", status.HTTP_404_NOT_FOUND),
+        pytest.param(
+            "ac2ef360-0002-4a8b-bf9b-84b7cf779960",
+            status.HTTP_200_OK,
+            id="Successful client retrieval",
+        ),
+        pytest.param(
+            "e72957e6-df6e-476b-af93-a1ae4610e72b",
+            status.HTTP_404_NOT_FOUND,
+            id="Non existent client UID",
+        ),
     ],
 )
 def test_get_client(test_client, sql_factory, client_uid, expected_status):
@@ -57,8 +69,16 @@ def test_list_clients(test_client, sql_factory):
 @pytest.mark.parametrize(
     ["client_uid", "expected_status"],
     [
-        pytest.param("ac2ef360-0002-4a8b-bf9b-84b7cf779960", status.HTTP_204_NO_CONTENT),
-        pytest.param("e72957e6-df6e-476b-af93-a1ae4610e72b", status.HTTP_404_NOT_FOUND),
+        pytest.param(
+            "ac2ef360-0002-4a8b-bf9b-84b7cf779960",
+            status.HTTP_204_NO_CONTENT,
+            id="Successful client deletion",
+        ),
+        pytest.param(
+            "e72957e6-df6e-476b-af93-a1ae4610e72b",
+            status.HTTP_404_NOT_FOUND,
+            id="Non existent client UID",
+        ),
     ],
 )
 def test_delete_client(test_client, test_db_session, sql_factory, client_uid, expected_status):
@@ -70,8 +90,7 @@ def test_delete_client(test_client, test_db_session, sql_factory, client_uid, ex
 
     assert response.status_code == expected_status
     if expected_status == status.HTTP_204_NO_CONTENT:
-        # Check response status and that client users have been deleted.
-        assert response.status_code == expected_status
+        # Check that client users have been deleted.
         assert test_db_session.scalar(select(func.count()).select_from(Client)) == 0
         assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
 
@@ -79,12 +98,30 @@ def test_delete_client(test_client, test_db_session, sql_factory, client_uid, ex
 @pytest.mark.parametrize(
     ["client_uid", "new_name", "expected_status"],
     [
-        pytest.param("ac2ef360-0002-4a8b-bf9b-84b7cf779960", "VASS Logic Ltd.", status.HTTP_200_OK),
-        pytest.param("ac2ef360-0002-4a8b-bf9b-84b7cf779960", "", status.HTTP_400_BAD_REQUEST),
         pytest.param(
-            "ac2ef360-0002-4a8b-bf9b-84b7cf779960", "Fields Ltd.", status.HTTP_409_CONFLICT
+            "ac2ef360-0002-4a8b-bf9b-84b7cf779960",
+            "VASS Logic Ltd.",
+            status.HTTP_200_OK,
+            id="Successful client update",
         ),
-        pytest.param("e72957e6-df6e-476b-af93-a1ae4610e72b", "Client", status.HTTP_404_NOT_FOUND),
+        pytest.param(
+            "ac2ef360-0002-4a8b-bf9b-84b7cf779960",
+            "",
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong client update - No name",
+        ),
+        pytest.param(
+            "ac2ef360-0002-4a8b-bf9b-84b7cf779960",
+            "Fields Ltd.",
+            status.HTTP_409_CONFLICT,
+            id="Wrong client update - Duplicated name.",
+        ),
+        pytest.param(
+            "e72957e6-df6e-476b-af93-a1ae4610e72b",
+            "Client",
+            status.HTTP_404_NOT_FOUND,
+            id="Non existent client UID",
+        ),
     ],
 )
 def test_update_client(
