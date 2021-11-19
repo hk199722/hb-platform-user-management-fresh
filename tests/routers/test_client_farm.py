@@ -11,23 +11,35 @@ from user_management.models import Client, ClientFarm
 @pytest.mark.parametrize(
     ["client_uid", "farm_uid", "expected_status"],
     [
-        # No Client uid.
-        pytest.param("", str(uuid.uuid4()), status.HTTP_400_BAD_REQUEST),
-        # No Farm uid.
-        pytest.param("970b5da1-f1a1-4255-8394-452e9f4e1f5e", "", status.HTTP_400_BAD_REQUEST),
-        # Non-existent Client uid.
         pytest.param(
-            "4e50e22f-3692-4016-be50-0bbf5aaef651", str(uuid.uuid4()), status.HTTP_404_NOT_FOUND
+            "",
+            str(uuid.uuid4()),
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong client farm creation - No client UID",
         ),
-        # Already existent Client-Farm relationship.
+        pytest.param(
+            "970b5da1-f1a1-4255-8394-452e9f4e1f5e",
+            "",
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong client farm creation - No farm UID",
+        ),
+        pytest.param(
+            "4e50e22f-3692-4016-be50-0bbf5aaef651",
+            str(uuid.uuid4()),
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong client farm creation - Non existent client UID",
+        ),
         pytest.param(
             "970b5da1-f1a1-4255-8394-452e9f4e1f5e",
             "4f8b2788-ae34-4a39-9d89-29f076303dcc",
             status.HTTP_409_CONFLICT,
+            id="Wrong client farm creation - Duplicated Client-Farm relationship",
         ),
-        # Successful creation.
         pytest.param(
-            "970b5da1-f1a1-4255-8394-452e9f4e1f5e", str(uuid.uuid4()), status.HTTP_201_CREATED
+            "970b5da1-f1a1-4255-8394-452e9f4e1f5e",
+            str(uuid.uuid4()),
+            status.HTTP_201_CREATED,
+            id="Successful client farm creation",
         ),
     ],
 )
@@ -51,8 +63,16 @@ def test_create_client_farm(
 @pytest.mark.parametrize(
     ["farm_uid", "expected_status"],
     [
-        pytest.param("4f8b2788-ae34-4a39-9d89-29f076303dcc", status.HTTP_200_OK),
-        pytest.param(str(uuid.uuid4()), status.HTTP_404_NOT_FOUND),
+        pytest.param(
+            "4f8b2788-ae34-4a39-9d89-29f076303dcc",
+            status.HTTP_200_OK,
+            id="Successful client farm detail retrieval",
+        ),
+        pytest.param(
+            str(uuid.uuid4()),
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong client farm retrieval - Non existent client farm UID",
+        ),
     ],
 )
 def test_get_client_farm(test_client, sql_factory, farm_uid, expected_status):
@@ -82,8 +102,14 @@ def test_list_client_farms(test_client, sql_factory):
 @pytest.mark.parametrize(
     ["farm_uid", "expected_status"],
     [
-        pytest.param(str(uuid.uuid4()), status.HTTP_404_NOT_FOUND),
-        pytest.param("4f8b2788-ae34-4a39-9d89-29f076303dcc", status.HTTP_204_NO_CONTENT),
+        pytest.param(
+            str(uuid.uuid4()), status.HTTP_404_NOT_FOUND, id="Successful client farm deletion"
+        ),
+        pytest.param(
+            "4f8b2788-ae34-4a39-9d89-29f076303dcc",
+            status.HTTP_204_NO_CONTENT,
+            id="Wrong client farm deletion - Non existent client farm UID",
+        ),
     ],
 )
 def test_delete_client_farm(test_client, test_db_session, sql_factory, farm_uid, expected_status):

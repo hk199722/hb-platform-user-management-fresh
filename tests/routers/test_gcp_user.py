@@ -9,22 +9,41 @@ from user_management.models import Client, GCPUser
 @pytest.mark.parametrize(
     ["user_name", "user_email", "user_phone", "expected_status"],
     [
-        # No user name.
         pytest.param(
-            "", "john.doe@hummingbirdtech.com", "+4402081232389", status.HTTP_400_BAD_REQUEST
+            "",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong user creation - No user name",
         ),
-        # No user email.
-        pytest.param("John Doe", "", "+4402081232389", status.HTTP_400_BAD_REQUEST),
-        # Existent user email.
         pytest.param(
-            "John Doe", "john.doe@hummingbirdtech.com", "+4402081232389", status.HTTP_409_CONFLICT
+            "John Doe",
+            "",
+            "+4402081232389",
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong user creation - No user email",
         ),
-        # Successful new user creation.
         pytest.param(
-            "Jane Doe", "jane.doe@hummingbirdtech.com", "+4402081232389", status.HTTP_201_CREATED
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_409_CONFLICT,
+            id="Wrong user creation - Duplicated user email",
         ),
-        # Successful new user creation - no phone number required.
-        pytest.param("Jane Doe", "jane.doe@hummingbirdtech.com", "", status.HTTP_201_CREATED),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+4402081232389",
+            status.HTTP_201_CREATED,
+            id="Successful new user creation",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "",
+            status.HTTP_201_CREATED,
+            id="Successful new user creation - no phone number required",
+        ),
     ],
 )
 def test_create_client(
@@ -48,8 +67,16 @@ def test_create_client(
 @pytest.mark.parametrize(
     ["user_uid", "expected_status"],
     [
-        pytest.param("d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc", status.HTTP_200_OK),
-        pytest.param("47294de0-8999-49c1-add4-6f8ac833ea6d", status.HTTP_404_NOT_FOUND),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            status.HTTP_200_OK,
+            id="Successful user detail retrieval",
+        ),
+        pytest.param(
+            "47294de0-8999-49c1-add4-6f8ac833ea6d",
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user retrieval - Non existent user UID",
+        ),
     ],
 )
 def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
@@ -89,45 +116,45 @@ def test_list_gcp_users(test_client, sql_factory):
 @pytest.mark.parametrize(
     ["user_uid", "user_name", "user_email", "user_phone", "expected_status"],
     [
-        # Non-existent user UID.
         pytest.param(
             "a0723fb5-6b0f-45ec-a131-6a6a1bd87741",
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
             status.HTTP_404_NOT_FOUND,
+            id="Wrong user update - Non existent user UID",
         ),
-        # No user email.
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
             "John Doe",
             "",
             "+4402081232389",
             status.HTTP_400_BAD_REQUEST,
+            id="Wrong user update - No user email",
         ),
-        # No user name.
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
             "",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
             status.HTTP_400_BAD_REQUEST,
+            id="Wrong user update - No user name",
         ),
-        # Duplicating existent user email.
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "+4402081232389",
             status.HTTP_409_CONFLICT,
+            id="Wrong user update - Duplicating existent user email.",
         ),
-        # Successful user update.
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
             status.HTTP_200_OK,
+            id="Successful user update",
         ),
     ],
 )
@@ -160,10 +187,16 @@ def test_update_gcp_user(
 @pytest.mark.parametrize(
     ["user_uid", "expected_status"],
     [
-        # Non-existent user UID.
-        pytest.param("a0723fb5-6b0f-45ec-a131-6a6a1bd87741", status.HTTP_404_NOT_FOUND),
-        # Successful deletion.
-        pytest.param("d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc", status.HTTP_204_NO_CONTENT),
+        pytest.param(
+            "a0723fb5-6b0f-45ec-a131-6a6a1bd87741",
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user deletion - Non existent user UID",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            status.HTTP_204_NO_CONTENT,
+            id="Successful user deletion",
+        ),
     ],
 )
 def test_delete_gcp_user(test_client, test_db_session, sql_factory, user_uid, expected_status):
