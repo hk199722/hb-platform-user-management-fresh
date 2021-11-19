@@ -146,7 +146,7 @@ def test_list_gcp_users(test_client, sql_factory):
             "jane.doe@hummingbirdtech.com",
             "+4402081232389",
             status.HTTP_409_CONFLICT,
-            id="Wrong user update - Duplicating existent user email.",
+            id="Wrong user update - Duplicating existent user email",
         ),
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
