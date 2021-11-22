@@ -3,16 +3,17 @@ import pytest
 from fastapi import status
 from sqlalchemy import func, select
 
-from user_management.models import Client, GCPUser
+from user_management.models import Client, GCPUser, Role
 
 
 @pytest.mark.parametrize(
-    ["user_name", "user_email", "user_phone", "expected_status"],
+    ["user_name", "user_email", "user_phone", "role", "expected_status"],
     [
         pytest.param(
             "",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user creation - No user name",
         ),
@@ -20,6 +21,7 @@ from user_management.models import Client, GCPUser
             "John Doe",
             "",
             "+4402081232389",
+            None,
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user creation - No user email",
         ),
@@ -27,6 +29,7 @@ from user_management.models import Client, GCPUser
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_409_CONFLICT,
             id="Wrong user creation - Duplicated user email",
         ),
@@ -34,6 +37,7 @@ from user_management.models import Client, GCPUser
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_201_CREATED,
             id="Successful new user creation",
         ),
@@ -41,18 +45,36 @@ from user_management.models import Client, GCPUser
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "",
+            None,
             status.HTTP_201_CREATED,
             id="Successful new user creation - no phone number required",
         ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "",
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            status.HTTP_201_CREATED,
+            id="Successful new user creation - with role specified",
+        ),
     ],
 )
-def test_create_client(
-    test_client, test_db_session, sql_factory, user_name, user_email, user_phone, expected_status
+def test_create_gcp_user(
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_name,
+    user_email,
+    user_phone,
+    role,
+    expected_status,
 ):
+    sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
     response = test_client.post(
-        "/api/v1/users", json={"name": user_name, "email": user_email, "phone_number": user_phone}
+        "/api/v1/users",
+        json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
     assert response.status_code == expected_status
@@ -62,6 +84,14 @@ def test_create_client(
         assert gcp_user.name == user_name
         assert gcp_user.email == user_email
         assert gcp_user.phone_number == user_phone
+
+        if role is not None:
+            assert response.json()["clients"] == [
+                {
+                    "client_uid": "f6787d5d-2577-4663-8de6-88b48c679109",
+                    "role": Role.NORMAL_USER.value,
+                }
+            ]
 
 
 @pytest.mark.parametrize(
@@ -80,7 +110,9 @@ def test_create_client(
     ],
 )
 def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
+    client = sql_factory.client.create()
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    client_user = sql_factory.client_user.create(client=client, user=gcp_user)
 
     response = test_client.get(f"/api/v1/users/{user_uid}")
 
@@ -91,24 +123,31 @@ def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
             "name": gcp_user.name,
             "email": gcp_user.email,
             "phone_number": gcp_user.phone_number,
+            "clients": [
+                {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
+            ],
         }
         assert response.json() == expected
 
 
 def test_list_gcp_users(test_client, sql_factory):
-    gcp_users = sql_factory.gcp_user.create_batch(size=3)
+    client = sql_factory.client.create()
+    client_users = sql_factory.client_user.create_batch(size=3, client=client)
 
     response = test_client.get("/api/v1/users")
 
     assert response.status_code == status.HTTP_200_OK
     expected = [
         {
-            "uid": str(gcp_user.uid),
-            "name": gcp_user.name,
-            "email": gcp_user.email,
-            "phone_number": gcp_user.phone_number,
+            "uid": str(client_user.user.uid),
+            "name": client_user.user.name,
+            "email": client_user.user.email,
+            "phone_number": client_user.user.phone_number,
+            "clients": [
+                {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
+            ],
         }
-        for gcp_user in gcp_users
+        for client_user in client_users
     ]
     assert response.json() == expected
 
