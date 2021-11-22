@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -33,7 +33,6 @@ class GCPUser(Base):
     name = Column(String(50), nullable=False)
     email = Column(String(150), nullable=False, unique=True)
     phone_number = Column(String(50))
-    roles = Column(ARRAY(Integer))
 
     clients = relationship("ClientUser", back_populates="user", cascade="all, delete")
 
