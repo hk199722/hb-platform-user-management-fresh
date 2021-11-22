@@ -1,16 +1,25 @@
+from enum import Enum
+
 from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.types import Enum as SQLEnum
 
 from user_management.core.database import Base
+
+
+class Role(Enum):
+    SUPERUSER = "SUPERUSER"
+    NORMAL_USER = "NORMAL_USER"
+    PILOT = "PILOT"
 
 
 class ClientUser(Base):
     __tablename__ = "client_user"
     client_uid = Column(ForeignKey("client.uid", ondelete="CASCADE"), primary_key=True)
     gcp_user_uid = Column(ForeignKey("gcp_user.uid", ondelete="CASCADE"), primary_key=True)
-    role = Column(String(15))
+    role = Column(SQLEnum(Role), nullable=False)
 
     user = relationship("GCPUser", back_populates="clients", cascade="all, delete")
     client = relationship("Client", back_populates="users")
