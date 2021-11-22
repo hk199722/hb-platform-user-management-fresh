@@ -121,7 +121,9 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
         return self.schema(**values)
 
     def create(self, schema: BaseModel) -> Schema:
-        entity = self.model(**schema.dict())
+        values = schema.dict().items()
+        row = {key: value for key, value in values if key in self.model.__table__.columns.keys()}
+        entity = self.model(**row)
         self.db.add(entity)
         self._persist_changes(schema=schema)
         self.db.refresh(entity)

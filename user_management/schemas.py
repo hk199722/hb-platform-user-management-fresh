@@ -1,4 +1,8 @@
+from typing import List, Optional
+
 from pydantic import BaseModel, EmailStr, UUID4, validator
+
+from user_management.models import Role
 
 
 class NamedModel(BaseModel):
@@ -20,11 +24,19 @@ class NewClientSchema(NamedModel):
     pass
 
 
+class ClientUserSchema(BaseModel):
+    client_uid: UUID4
+    role: Role
+
+    class Config:
+        orm_mode = True
+
+
 class GCPUserSchema(NamedModel):
     uid: UUID4
     email: EmailStr
     phone_number: str
-    # TODO: roles
+    clients: List[ClientUserSchema]
 
     class Config:
         orm_mode = True
@@ -33,10 +45,7 @@ class GCPUserSchema(NamedModel):
 class NewGCPUserSchema(NamedModel):
     email: EmailStr
     phone_number: str
-    # TODO: roles
-
-    class Config:
-        orm_mode = True
+    role: Optional[ClientUserSchema] = None
 
 
 class ClientFarmSchema(BaseModel):
