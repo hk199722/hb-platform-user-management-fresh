@@ -1,9 +1,10 @@
 import uuid
 
 import factory
+from factory import fuzzy
 from sqlalchemy.orm import Session
 
-from user_management.models import Client, ClientFarm, ClientUser, GCPUser
+from user_management.models import Client, ClientFarm, ClientUser, GCPUser, Role
 
 
 class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -45,6 +46,7 @@ class GCPUserFactory(BaseModelFactory):
 class ClientUserFactory(BaseModelFactory):
     user = factory.SubFactory(GCPUserFactory)
     client = factory.SubFactory(ClientFactory)
+    role = fuzzy.FuzzyChoice([role for role in Role])
 
     class Meta:
         model = ClientUser
