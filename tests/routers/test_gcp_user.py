@@ -200,8 +200,8 @@ def test_update_gcp_user(
     ],
 )
 def test_delete_gcp_user(test_client, test_db_session, sql_factory, user_uid, expected_status):
-    client = sql_factory.client.create()
-    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc", clients=[client])
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    user_client = sql_factory.client_user.create(user=gcp_user)
     test_db_session.commit()
 
     response = test_client.delete(f"/api/v1/users/{user_uid}")
@@ -212,7 +212,7 @@ def test_delete_gcp_user(test_client, test_db_session, sql_factory, user_uid, ex
         # Check that user Client is still there.
         assert (
             test_db_session.scalar(
-                select(func.count()).select_from(Client).filter_by(uid=client.uid)
+                select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
             )
             == 1
         )

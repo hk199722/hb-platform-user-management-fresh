@@ -83,7 +83,7 @@ def test_list_clients(test_client, sql_factory):
 )
 def test_delete_client(test_client, test_db_session, sql_factory, client_uid, expected_status):
     client = sql_factory.client.create(uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
-    sql_factory.gcp_user.create_batch(size=3, clients=[client])
+    sql_factory.client_user.create_batch(size=3, client=client)
     test_db_session.commit()
 
     response = test_client.delete(f"/api/v1/clients/{client_uid}")
