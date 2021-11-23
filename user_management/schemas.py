@@ -1,8 +1,12 @@
+import re
 from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, UUID4, validator
 
 from user_management.models import Role
+
+
+PHONE_PATTERN = re.compile(r"\+[0-9 ]+")
 
 
 class NamedModel(BaseModel):
@@ -32,19 +36,31 @@ class ClientUserSchema(BaseModel):
         orm_mode = True
 
 
-class GCPUserSchema(NamedModel):
+class NamedPhoneModel(NamedModel):
+    phone_number: str = ""
+
+    @validator("phone_number")
+    def valid_phone_number(cls, value):  # pylint: disable=no-self-argument
+        if value and PHONE_PATTERN.match(value) is None:
+            raise ValueError(
+                f"{value} is not a valid phone number. Accepted phone numbers are E.164 compliant "
+                f"(+<area code><phone number>)."
+            )
+
+        return value.replace(" ", "")
+
+
+class GCPUserSchema(NamedPhoneModel):
     uid: UUID4
     email: EmailStr
-    phone_number: str
     clients: List[ClientUserSchema]
 
     class Config:
         orm_mode = True
 
 
-class NewGCPUserSchema(NamedModel):
+class NewGCPUserSchema(NamedPhoneModel):
     email: EmailStr
-    phone_number: str
     role: Optional[ClientUserSchema] = None
 
 

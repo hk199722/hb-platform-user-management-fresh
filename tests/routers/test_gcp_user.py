@@ -54,7 +54,7 @@ from user_management.models import Client, ClientUser, GCPUser, Role
         pytest.param(
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
-            "+4402081232389",
+            "+44 02081232389",
             None,
             status.HTTP_201_CREATED,
             id="Successful new user creation",
@@ -101,7 +101,8 @@ def test_create_gcp_user(
         gcp_user = test_db_session.get(GCPUser, gcp_user_uid)
         assert gcp_user.name == user_name
         assert gcp_user.email == user_email
-        assert gcp_user.phone_number == user_phone
+        # User phones normalization.
+        assert gcp_user.phone_number == user_phone.replace(" ", "")
 
         if role is not None:
             # Role passed, and new role created successfully.
@@ -146,7 +147,8 @@ def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
             "uid": str(gcp_user.uid),
             "name": gcp_user.name,
             "email": gcp_user.email,
-            "phone_number": gcp_user.phone_number,
+            # User phones normalization.
+            "phone_number": gcp_user.phone_number.replace(" ", ""),
             "clients": [
                 {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
             ],
@@ -166,7 +168,8 @@ def test_list_gcp_users(test_client, sql_factory):
             "uid": str(client_user.user.uid),
             "name": client_user.user.name,
             "email": client_user.user.email,
-            "phone_number": client_user.user.phone_number,
+            # User phones normalization.
+            "phone_number": client_user.user.phone_number.replace(" ", ""),
             "clients": [
                 {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
             ],

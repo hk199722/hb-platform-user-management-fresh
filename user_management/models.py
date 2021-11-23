@@ -17,6 +17,7 @@ class Role(Enum):
 
 class ClientUser(Base):
     __tablename__ = "client_user"
+
     client_uid = Column(ForeignKey("client.uid", ondelete="CASCADE"), primary_key=True)
     gcp_user_uid = Column(ForeignKey("gcp_user.uid", ondelete="CASCADE"), primary_key=True)
     role = Column(SQLEnum(Role), nullable=False)
