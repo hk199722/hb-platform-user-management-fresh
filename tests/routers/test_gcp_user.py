@@ -1,9 +1,11 @@
+import uuid
+
 import pytest
 
 from fastapi import status
 from sqlalchemy import func, select
 
-from user_management.models import Client, GCPUser, Role
+from user_management.models import Client, ClientUser, GCPUser, Role
 
 
 @pytest.mark.parametrize(
@@ -32,6 +34,14 @@ from user_management.models import Client, GCPUser, Role
             None,
             status.HTTP_409_CONFLICT,
             id="Wrong user creation - Duplicated user email",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "",
+            {"client_uid": str(uuid.uuid4()), "role": Role.NORMAL_USER.value},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user update - role specified with invalid client",
         ),
         pytest.param(
             "Jane Doe",
@@ -69,7 +79,7 @@ def test_create_gcp_user(
     role,
     expected_status,
 ):
-    sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
     response = test_client.post(
@@ -86,12 +96,18 @@ def test_create_gcp_user(
         assert gcp_user.phone_number == user_phone
 
         if role is not None:
+            # Role passed, and new role created successfully.
             assert response.json()["clients"] == [
                 {
                     "client_uid": "f6787d5d-2577-4663-8de6-88b48c679109",
                     "role": Role.NORMAL_USER.value,
                 }
             ]
+
+            client_user = test_db_session.scalar(
+                select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
+            )
+            assert client_user is not None
 
 
 @pytest.mark.parametrize(
@@ -153,13 +169,14 @@ def test_list_gcp_users(test_client, sql_factory):
 
 
 @pytest.mark.parametrize(
-    ["user_uid", "user_name", "user_email", "user_phone", "expected_status"],
+    ["user_uid", "user_name", "user_email", "user_phone", "role", "expected_status"],
     [
         pytest.param(
             "a0723fb5-6b0f-45ec-a131-6a6a1bd87741",
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_404_NOT_FOUND,
             id="Wrong user update - Non existent user UID",
         ),
@@ -168,6 +185,7 @@ def test_list_gcp_users(test_client, sql_factory):
             "John Doe",
             "",
             "+4402081232389",
+            None,
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user update - No user email",
         ),
@@ -176,6 +194,7 @@ def test_list_gcp_users(test_client, sql_factory):
             "",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user update - No user name",
         ),
@@ -184,6 +203,7 @@ def test_list_gcp_users(test_client, sql_factory):
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_409_CONFLICT,
             id="Wrong user update - Duplicating existent user email",
         ),
@@ -192,8 +212,36 @@ def test_list_gcp_users(test_client, sql_factory):
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             status.HTTP_200_OK,
             id="Successful user update",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            {"client_uid": "0a208dde-f68f-4682-b75f-eab67de6a64b", "role": Role.NORMAL_USER.value},
+            status.HTTP_409_CONFLICT,
+            id="Wrong user update - role already registered",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            {"client_uid": str(uuid.uuid4()), "role": Role.NORMAL_USER.value},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user update - role specified with invalid client",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            status.HTTP_200_OK,
+            id="Successful user update - with role specified",
         ),
     ],
 )
@@ -205,22 +253,42 @@ def test_update_gcp_user(
     user_name,
     user_email,
     user_phone,
+    role,
     expected_status,
 ):
-    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    # Client 1, the Client we will update our GCPUser with when we pass a role to it.
+    client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    client_2 = sql_factory.client.create(uid="0a208dde-f68f-4682-b75f-eab67de6a64b")
+    # GCPUser, already belongs to Client 2.
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.client_user.create(client=client_2, user=gcp_user)
     sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
 
     response = test_client.post(
         f"/api/v1/users/{user_uid}",
-        json={"name": user_name, "email": user_email, "phone_number": user_phone},
+        json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
     assert response.status_code == expected_status
     if response.status_code == status.HTTP_200_OK:
+        test_db_session.expire_all()
         modified_user = test_db_session.get(GCPUser, user_uid)
         assert modified_user.name == user_name
         assert modified_user.email == user_email
         assert modified_user.phone_number == user_phone
+
+        if role is not None:
+            assert response.json()["clients"] == [
+                {
+                    "client_uid": "f6787d5d-2577-4663-8de6-88b48c679109",
+                    "role": Role.NORMAL_USER.value,
+                }
+            ]
+
+            client_user = test_db_session.scalar(
+                select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=client_1.uid)
+            )
+            assert client_user is not None
 
 
 @pytest.mark.parametrize(
