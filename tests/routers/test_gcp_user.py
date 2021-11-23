@@ -46,6 +46,14 @@ from user_management.models import Client, ClientUser, GCPUser, Role
         pytest.param(
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
+            "",
+            {"client_uid": str(uuid.uuid4()), "role": "INVALID_ROLE"},
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong user update - role specified with invalid role",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
             "+4402081232389",
             None,
             status.HTTP_201_CREATED,
@@ -233,6 +241,15 @@ def test_list_gcp_users(test_client, sql_factory):
             {"client_uid": str(uuid.uuid4()), "role": Role.NORMAL_USER.value},
             status.HTTP_404_NOT_FOUND,
             id="Wrong user update - role specified with invalid client",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "John Doe",
+            "john.doe@hummingbirdtech.com",
+            "+4402081232389",
+            {"client_uid": str(uuid.uuid4()), "role": "INVALID_ROLE"},
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong user update - role specified with invalid role",
         ),
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
