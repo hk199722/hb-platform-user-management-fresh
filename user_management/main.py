@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException
 
 from user_management.core.config.logging import logging_config
 from user_management.core.config.settings import get_settings
+from user_management.core.firebase import init_identity_provider_app
 from user_management.routers.client import router as clients_router
 from user_management.routers.client_farm import router as client_farms_router
 from user_management.routers.gcp_user import router as gcp_user_router
@@ -25,7 +26,9 @@ def create_app() -> FastAPI:
     """
     settings = get_settings()
 
-    # Initialize app.
+    init_identity_provider_app()
+
+    # Initialize FastAPI app.
     app = FastAPI(title="Users Management")
 
     if settings.cors_allow_origin:
