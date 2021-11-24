@@ -25,6 +25,9 @@ class ClientUser(Base):
     user = relationship("GCPUser", back_populates="clients", cascade="all, delete")
     client = relationship("Client", back_populates="users")
 
+    def __repr__(self):
+        return f"<ClientUser: client_uid={self.client_uid}, user_uid={self.gcp_user_uid}>"
+
 
 class Client(Base):
     __tablename__ = "client"
@@ -34,6 +37,9 @@ class Client(Base):
 
     users = relationship("ClientUser", back_populates="client", cascade="all, delete")
     farms = relationship("ClientFarm", back_populates="client", cascade="all, delete")
+
+    def __repr__(self):
+        return f"<Client: uid={self.uid}, name={self.name}>"
 
 
 class GCPUser(Base):
@@ -46,6 +52,9 @@ class GCPUser(Base):
 
     clients = relationship("ClientUser", back_populates="user", cascade="all, delete")
 
+    def __repr__(self):
+        return f"<GCPUser: uid={self.uid}, email={self.email}>"
+
 
 class ClientFarm(Base):
     __tablename__ = "client_farm"
@@ -54,3 +63,6 @@ class ClientFarm(Base):
     client_uid = Column(UUID(as_uuid=True), ForeignKey("client.uid", ondelete="CASCADE"))
 
     client = relationship("Client", back_populates="farms")
+
+    def __repr__(self):
+        return f"<ClientFarm: farm_uid={self.farm_uid}, client_uid={self.client_uid}>"
