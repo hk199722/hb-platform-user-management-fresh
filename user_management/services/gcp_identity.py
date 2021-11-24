@@ -22,7 +22,7 @@ class GCPIdentityProviderService:
             logger.error(
                 "Unable to create user in GCP Identity Platform. Duplicated UID: %s", gcp_user.uid
             )
-            raise ResourceConflictError(context={"uid": gcp_user.uid}) from error
+            raise ResourceConflictError(context={"uid": str(gcp_user.uid)}) from error
         except PhoneNumberAlreadyExistsError as error:
             logger.error(
                 "Unable to create user in GCP Identity Platform. Duplicated phone number: %s",
