@@ -1,8 +1,14 @@
 import uuid
+from unittest.mock import patch
 
 import pytest
 
 from fastapi import status
+from firebase_admin.auth import (
+    EmailAlreadyExistsError,
+    UidAlreadyExistsError,
+    PhoneNumberAlreadyExistsError,
+)
 from sqlalchemy import func, select
 
 from user_management.models import Client, ClientUser, GCPUser, Role
@@ -77,7 +83,9 @@ from user_management.models import Client, ClientUser, GCPUser, Role
         ),
     ],
 )
+@patch("user_management.services.gcp_user.GCPIdentityProviderService")
 def test_create_gcp_user(
+    mock_identity_provider,
     test_client,
     test_db_session,
     sql_factory,
@@ -87,6 +95,7 @@ def test_create_gcp_user(
     role,
     expected_status,
 ):
+    mock_identity_provider().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
@@ -117,6 +126,91 @@ def test_create_gcp_user(
                 select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
             )
             assert client_user is not None
+
+
+@pytest.mark.parametrize(
+    ["user_name", "user_email", "user_phone", "role", "gcp_ip_error", "expected_status"],
+    [
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 555 435 7911",
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            EmailAlreadyExistsError(
+                message="The user with the provided email already exists",
+                cause="(EMAIL_EXISTS)",
+                http_response=None,
+            ),
+            status.HTTP_409_CONFLICT,
+            id="Wrong user syncing with GCP - duplicated email",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 555 435 7911",
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            UidAlreadyExistsError(
+                message="The user with the provided uid already exists",
+                cause="(DUPLICATE_LOCAL_ID)",
+                http_response=None,
+            ),
+            status.HTTP_409_CONFLICT,
+            id="Wrong user syncing with GCP - duplicated UID",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 555 435 7911",
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            PhoneNumberAlreadyExistsError(
+                message="The user with the provided phone number already exists",
+                cause="(PHONE_NUMBER_EXISTS)",
+                http_response=None,
+            ),
+            status.HTTP_409_CONFLICT,
+            id="Wrong user syncing with GCP - duplicated phone number",
+        ),
+    ],
+)
+@patch("user_management.services.gcp_identity.create_user")
+def test_sync_gcp_user_errors(
+    mock_identity_provider,
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_name,
+    user_email,
+    user_phone,
+    role,
+    gcp_ip_error,
+    expected_status,
+):
+    mock_identity_provider.side_effect = gcp_ip_error
+
+    client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+
+    response = test_client.post(
+        "/api/v1/users",
+        json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
+    )
+
+    assert response.status_code == expected_status
+
+    gcp_user_uid = response.json().get("context", {}).get("uid")
+    assert gcp_user_uid is not None
+
+    # User has been created anyway in local DB.
+    gcp_user = test_db_session.get(GCPUser, gcp_user_uid)
+    assert gcp_user.name == user_name
+    assert gcp_user.email == user_email
+    # User phones normalization.
+    assert gcp_user.phone_number == user_phone.replace(" ", "")
+
+    # Role passed, and new role created successfully.
+    client_user = test_db_session.scalar(
+        select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
+    )
+    assert client_user is not None
 
 
 @pytest.mark.parametrize(
