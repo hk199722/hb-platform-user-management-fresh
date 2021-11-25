@@ -20,7 +20,7 @@ from user_management.core.exceptions import (
     ResourceConflictError,
     ResourceNotFoundError,
 )
-from user_management.core.firebase import init_identity_provider_app
+from user_management.core.firebase import init_identity_platform_app
 from user_management.schemas import GCPUserSchema
 
 
@@ -66,8 +66,8 @@ class GCPIdentityPlatformService:
 
     def sync_gcp_user(self, gcp_user: GCPUserSchema, update: bool = False) -> None:
         """Synchronizes data from a local DB `GCPUser` with GCP."""
-        if not init_identity_provider_app():
-            logger.debug("GCP Identity Provider not connected. New user not synced.")
+        if not init_identity_platform_app():
+            logger.debug("GCP Identity Platform not connected. New user not synced.")
             return
 
         try:

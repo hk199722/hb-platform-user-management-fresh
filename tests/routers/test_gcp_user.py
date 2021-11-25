@@ -87,7 +87,7 @@ from user_management.models import Client, ClientUser, GCPUser, Role
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
 def test_create_gcp_user(
-    mock_identity_provider,
+    mock_identity_platform,
     test_client,
     test_db_session,
     sql_factory,
@@ -97,7 +97,7 @@ def test_create_gcp_user(
     role,
     expected_status,
 ):
-    mock_identity_provider().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
@@ -199,7 +199,7 @@ def test_create_gcp_user(
 )
 @patch("user_management.services.gcp_identity.create_user")
 def test_create_sync_gcp_user_errors(
-    mock_identity_provider,
+    mock_identity_platform,
     test_client,
     test_db_session,
     sql_factory,
@@ -210,7 +210,7 @@ def test_create_sync_gcp_user_errors(
     gcp_ip_error,
     expected_status,
 ):
-    mock_identity_provider.side_effect = gcp_ip_error
+    mock_identity_platform.side_effect = gcp_ip_error
 
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
 
@@ -386,7 +386,7 @@ def test_list_gcp_users(test_client, sql_factory):
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
 def test_update_gcp_user(
-    mock_identity_provider,
+    mock_identity_platform,
     test_client,
     test_db_session,
     sql_factory,
@@ -397,7 +397,7 @@ def test_update_gcp_user(
     role,
     expected_status,
 ):
-    mock_identity_provider().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     # Client 1, the Client we will update our GCPUser with when we pass a role to it.
     client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     client_2 = sql_factory.client.create(uid="0a208dde-f68f-4682-b75f-eab67de6a64b")
@@ -501,7 +501,7 @@ def test_update_gcp_user(
 )
 @patch("user_management.services.gcp_identity.update_user")
 def test_update_sync_gcp_user_errors(
-    mock_identity_provider,
+    mock_identity_platform,
     test_client,
     test_db_session,
     sql_factory,
@@ -513,7 +513,7 @@ def test_update_sync_gcp_user_errors(
     gcp_ip_error,
     expected_status,
 ):
-    mock_identity_provider.side_effect = gcp_ip_error
+    mock_identity_platform.side_effect = gcp_ip_error
 
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
@@ -559,9 +559,9 @@ def test_update_sync_gcp_user_errors(
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
 def test_delete_gcp_user(
-    mock_identity_provider, test_client, test_db_session, sql_factory, user_uid, expected_status
+    mock_identity_platform, test_client, test_db_session, sql_factory, user_uid, expected_status
 ):
-    mock_identity_provider().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_identity_platform().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
     user_client = sql_factory.client_user.create(user=gcp_user)
     test_db_session.commit()
@@ -597,7 +597,7 @@ def test_delete_gcp_user(
 )
 @patch("user_management.services.gcp_identity.delete_user")
 def test_delete_sync_gcp_user_errors(
-    mock_identity_provider,
+    mock_identity_platform,
     test_client,
     test_db_session,
     sql_factory,
@@ -605,7 +605,7 @@ def test_delete_sync_gcp_user_errors(
     gcp_ip_error,
     expected_status,
 ):
-    mock_identity_provider.side_effect = gcp_ip_error
+    mock_identity_platform.side_effect = gcp_ip_error
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
     user_client = sql_factory.client_user.create(user=gcp_user)
     test_db_session.commit()

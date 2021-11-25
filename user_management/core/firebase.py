@@ -13,17 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 @cache
-def init_identity_provider_app() -> Optional[App]:
-    """Cached function to initialize GCP Identity Provider / Firebase app."""
+def init_identity_platform_app() -> Optional[App]:
+    """Cached function to initialize GCP Identity Platform / Firebase app."""
     settings = get_settings()
     if not settings.gcp_credentials:
-        logger.warning("GCP Identity Provider NOT connected: GCP credentials not configured.")
+        logger.warning("GCP Identity Platform NOT connected: GCP credentials not configured.")
         return None
 
     try:
         gcp_credentials = Certificate(json.loads(settings.gcp_credentials.get_secret_value()))
     except Exception:  # pylint: disable=broad-except
-        logger.exception("GCP Identity Provider NOT connected: invalid GCP credentials.")
+        logger.exception("GCP Identity Platform NOT connected: invalid GCP credentials.")
         return None
 
     try:
@@ -31,9 +31,9 @@ def init_identity_provider_app() -> Optional[App]:
             credential=gcp_credentials, options={"httpTimeout": settings.gcp_request_timeout}
         )
     except Exception:  # pylint: disable=broad-except
-        logger.exception("GCP Identity Provider NOT connected: unable to initialize app.")
+        logger.exception("GCP Identity Platform NOT connected: unable to initialize app.")
         return None
 
-    logger.info("GCP Identity Provider / Firebase app initialized.")
+    logger.info("GCP Identity Platform / Firebase app initialized.")
 
     return app

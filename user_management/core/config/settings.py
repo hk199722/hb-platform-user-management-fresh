@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # CORS middleware
     cors_allow_origin: Optional[Pattern]
 
-    # GCP Identity Provider
+    # GCP Identity Platform
     gcp_credentials: Optional[SecretStr]
     gcp_request_timeout: int = 30
 
