@@ -1,9 +1,10 @@
 import uuid
 
 import factory
+from factory import fuzzy
 from sqlalchemy.orm import Session
 
-from user_management.models import Client, ClientFarm, GCPUser
+from user_management.models import Client, ClientFarm, ClientUser, GCPUser, Role
 
 
 class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -41,14 +42,15 @@ class GCPUserFactory(BaseModelFactory):
         model = GCPUser
         sqlalchemy_session_persistence = "commit"
 
-    @factory.post_generation
-    def clients(self, create, extracted):
-        if not create:
-            return
 
-        if extracted:
-            for client in extracted:
-                self.clients.append(client)  # pylint: disable=no-member
+class ClientUserFactory(BaseModelFactory):
+    user = factory.SubFactory(GCPUserFactory)
+    client = factory.SubFactory(ClientFactory)
+    role = fuzzy.FuzzyChoice([role for role in Role])
+
+    class Meta:
+        model = ClientUser
+        sqlalchemy_session_persistence = "commit"
 
 
 class ClientFarmFactory(BaseModelFactory):
@@ -73,6 +75,7 @@ class SQLModelFactory:
     client = None
     gcp_user = None
     client_farm = None
+    client_user = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -83,4 +86,5 @@ class SQLModelFactory:
             client=ClientFactory.bind(session),
             gcp_user=GCPUserFactory.bind(session),
             client_farm=ClientFarmFactory.bind(session),
+            client_user=ClientUserFactory.bind(session),
         )
