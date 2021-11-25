@@ -406,7 +406,7 @@ def test_update_gcp_user(
     sql_factory.client_user.create(client=client_2, user=gcp_user)
     sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
 
-    response = test_client.post(
+    response = test_client.patch(
         f"/api/v1/users/{user_uid}",
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
@@ -518,7 +518,7 @@ def test_update_sync_gcp_user_errors(
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
 
-    response = test_client.post(
+    response = test_client.patch(
         f"/api/v1/users/{user_uid}",
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
