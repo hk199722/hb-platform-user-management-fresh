@@ -85,7 +85,7 @@ from user_management.models import Client, ClientUser, GCPUser, Role
         ),
     ],
 )
-@patch("user_management.services.gcp_user.GCPIdentityProviderService")
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
 def test_create_gcp_user(
     mock_identity_provider,
     test_client,
@@ -384,7 +384,7 @@ def test_list_gcp_users(test_client, sql_factory):
         ),
     ],
 )
-@patch("user_management.services.gcp_user.GCPIdentityProviderService")
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
 def test_update_gcp_user(
     mock_identity_provider,
     test_client,
