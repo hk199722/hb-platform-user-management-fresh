@@ -4,6 +4,7 @@ from firebase_admin.auth import (
     create_user,
     EmailAlreadyExistsError,
     PhoneNumberAlreadyExistsError,
+    set_custom_user_claims,
     UidAlreadyExistsError,
     update_user,
     UserNotFoundError,
@@ -65,3 +66,11 @@ class GCPIdentityPlatformService:
                 update_user(uid=str(gcp_user.uid), display_name=gcp_user.name, email=gcp_user.email)
         except Exception as error:  # pylint: disable=broad-except
             self._handle_gcp_exception(error, gcp_user)
+
+        if gcp_user.clients:
+            roles = {client_user.client_uid: client_user.role for client_user in gcp_user.clients}
+
+            try:
+                set_custom_user_claims(gcp_user.uid, {"roles": roles})
+            except Exception as error:  # pylint: disable=broad-except
+                self._handle_gcp_exception(error, gcp_user)
