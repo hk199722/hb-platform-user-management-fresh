@@ -89,9 +89,9 @@ workflows:
             - test
           context:
             - gcp-secrets
-          filters:
-            branches:
-              only: develop
+#          filters:
+#            branches:
+#              only: develop
 
       # prod
       - hold:
