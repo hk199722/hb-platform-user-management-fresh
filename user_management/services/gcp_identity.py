@@ -60,7 +60,7 @@ class GCPIdentityPlatformService:
                 }
             )
         else:
-            context.update({"uid": gcp_user})
+            context.update({"uid": str(gcp_user)})
 
         raise exception_class(context=context) from error
 
@@ -88,6 +88,6 @@ class GCPIdentityPlatformService:
 
     def remove_gcp_user(self, uid: UUID4) -> None:
         try:
-            delete_user(uid=uid)
+            delete_user(uid=str(uid))
         except Exception as error:  # pylint: disable=broad-except
             self._handle_gcp_exception(error, uid)
