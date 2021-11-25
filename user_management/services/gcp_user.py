@@ -14,7 +14,7 @@ class GCPUserService:
         self.gcp_identity_service = GCPIdentityPlatformService()
 
     def create_gcp_user(self, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
-        """Persists GCPUser in database and synchronizes new user with GCP Identity Platform."""
+        """Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform."""
         created_user = self.gcp_user_repository.create(schema=gcp_user)
 
         # Synchronize GCP Identity Platform.
@@ -23,12 +23,15 @@ class GCPUserService:
         return created_user
 
     def get_gcp_user(self, uid: UUID4) -> GCPUserSchema:
+        """Gets `GCPUser`s data from local database."""
         return self.gcp_user_repository.get(pk=uid)
 
     def list_gcp_users(self) -> List[GCPUserSchema]:
+        """Lists `GCPUser`s data from local database."""
         return self.gcp_user_repository.list()
 
     def update_gcp_user(self, uid: UUID4, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
+        """Updates `GCPUser` data in database and synchronizes it with GCP Identity Platform."""
         updated_user = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
 
         # Synchronize GCP Identity Platform.
@@ -37,4 +40,5 @@ class GCPUserService:
         return updated_user
 
     def delete_gcp_user(self, uid: UUID4) -> None:
-        return self.gcp_user_repository.delete(pk=uid)
+        """Deletes `GCPUser` from local database, and also from GCP Identity Platform."""
+        self.gcp_user_repository.delete(pk=uid)

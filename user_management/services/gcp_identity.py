@@ -1,7 +1,11 @@
 import logging
+from typing import Union
+
+from pydantic import UUID4
 
 from firebase_admin.auth import (
     create_user,
+    delete_user,
     EmailAlreadyExistsError,
     PhoneNumberAlreadyExistsError,
     set_custom_user_claims,
@@ -27,7 +31,7 @@ class GCPIdentityPlatformService:
     """Service implementation to communicate and synchronize data with GCP Identity Platform."""
 
     @staticmethod
-    def _handle_gcp_exception(error: Exception, gcp_user: GCPUserSchema) -> None:
+    def _handle_gcp_exception(error: Exception, gcp_user: Union[GCPUserSchema, UUID4]) -> None:
         """Helper method to handle all possible error responses from GCP in detail."""
         logger.error("Error syncing users data with GCP Identity Platform: %s", str(error))
 
@@ -43,15 +47,22 @@ class GCPIdentityPlatformService:
         }
 
         exception_class, message = map_exceptions[type(error)]
+        context = {"message": message}
 
-        raise exception_class(
-            context={
-                "message": message,
-                "uid": str(gcp_user.uid),
-                "email": gcp_user.email,
-                "phone_number": gcp_user.phone_number,
-            }
-        ) from error
+        # Build exception response context with the available data.
+        if isinstance(gcp_user, GCPUserSchema):
+            context.update(
+                {
+                    "message": message,
+                    "uid": str(gcp_user.uid),
+                    "email": gcp_user.email,
+                    "phone_number": gcp_user.phone_number,
+                }
+            )
+        else:
+            context.update({"uid": gcp_user})
+
+        raise exception_class(context=context) from error
 
     def sync_gcp_user(self, gcp_user: GCPUserSchema, update: bool = False) -> None:
         """Synchronizes data from a local DB `GCPUser` with GCP."""
@@ -74,3 +85,9 @@ class GCPIdentityPlatformService:
                 set_custom_user_claims(gcp_user.uid, {"roles": roles})
             except Exception as error:  # pylint: disable=broad-except
                 self._handle_gcp_exception(error, gcp_user)
+
+    def remove_gcp_user(self, uid: UUID4) -> None:
+        try:
+            delete_user(uid=uid)
+        except Exception as error:  # pylint: disable=broad-except
+            self._handle_gcp_exception(error, uid)
