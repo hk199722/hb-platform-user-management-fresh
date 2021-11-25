@@ -557,7 +557,11 @@ def test_update_sync_gcp_user_errors(
         ),
     ],
 )
-def test_delete_gcp_user(test_client, test_db_session, sql_factory, user_uid, expected_status):
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_delete_gcp_user(
+    mock_identity_provider, test_client, test_db_session, sql_factory, user_uid, expected_status
+):
+    mock_identity_provider().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
     user_client = sql_factory.client_user.create(user=gcp_user)
     test_db_session.commit()
@@ -574,3 +578,46 @@ def test_delete_gcp_user(test_client, test_db_session, sql_factory, user_uid, ex
             )
             == 1
         )
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "gcp_ip_error", "expected_status"],
+    [
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            UserNotFoundError(
+                message="No user record found for the given identifier",
+                cause="USER_NOT_FOUND",
+                http_response=None,
+            ),
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user deletion syncing with GCP - Non existent user UID",
+        ),
+    ],
+)
+@patch("user_management.services.gcp_identity.delete_user")
+def test_delete_sync_gcp_user_errors(
+    mock_identity_provider,
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_uid,
+    gcp_ip_error,
+    expected_status,
+):
+    mock_identity_provider.side_effect = gcp_ip_error
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    user_client = sql_factory.client_user.create(user=gcp_user)
+    test_db_session.commit()
+
+    response = test_client.delete(f"/api/v1/users/{user_uid}")
+
+    assert response.status_code == expected_status
+    assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
+    # Check that user Client is still there.
+    assert (
+        test_db_session.scalar(
+            select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
+        )
+        == 1
+    )
