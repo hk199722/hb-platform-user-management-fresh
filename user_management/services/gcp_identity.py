@@ -9,7 +9,7 @@ from firebase_admin.auth import (
     UserNotFoundError,
 )
 
-from user_management.core.exceptions import ResourceConflictError
+from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
 from user_management.core.firebase import init_identity_provider_app
 from user_management.schemas import GCPUserSchema
 
@@ -71,7 +71,7 @@ class GCPIdentityProviderService:
                 "Unable to modify user in GCP Identity Platform. User not found: %s",
                 gcp_user.uid,
             )
-            raise ResourceConflictError(
+            raise ResourceNotFoundError(
                 context={
                     "message": "User not found.",
                     "uid": str(gcp_user.uid),
