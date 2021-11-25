@@ -4,9 +4,6 @@ FROM python:3.9-slim-buster
 WORKDIR /user_management
 ENV PYTHONPATH="${PYTHONPATH}:user_management"
 
-RUN apt-get -y update && \
-    apt-get -y upgrade && \
-    apt-get install -y git libspatialindex-dev \
 
 RUN pip install poetry; poetry config virtualenvs.create false
 ADD poetry.lock pyproject.toml /user_management/
