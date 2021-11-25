@@ -8,8 +8,12 @@ from firebase_admin.auth import (
     update_user,
     UserNotFoundError,
 )
-
-from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
+from firebase_admin.exceptions import InvalidArgumentError
+from user_management.core.exceptions import (
+    RequestError,
+    ResourceConflictError,
+    ResourceNotFoundError,
+)
 from user_management.core.firebase import init_identity_provider_app
 from user_management.schemas import GCPUserSchema
 
@@ -74,6 +78,16 @@ class GCPIdentityProviderService:
             raise ResourceNotFoundError(
                 context={
                     "message": "User not found.",
+                    "uid": str(gcp_user.uid),
+                    "email": gcp_user.email,
+                    "phone_number": gcp_user.phone_number,
+                }
+            ) from error
+        except (InvalidArgumentError, ValueError) as error:
+            logger.error("Invalid request to GCP Identity Platform: %s", str(error))
+            raise RequestError(
+                context={
+                    "message": str(error),
                     "uid": str(gcp_user.uid),
                     "email": gcp_user.email,
                     "phone_number": gcp_user.phone_number,
