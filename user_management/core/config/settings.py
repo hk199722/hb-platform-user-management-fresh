@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseSettings, DirectoryPath, PostgresDsn, SecretBytes
+from pydantic import BaseSettings, DirectoryPath, PostgresDsn, SecretStr
 from pydantic.schema import Pattern
 
 
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     cors_allow_origin: Optional[Pattern]
 
     # GCP Identity Provider
-    gcp_credentials: SecretBytes = None
+    gcp_credentials: Optional[SecretStr]
     gcp_request_timeout: int = 30
 
     class Config:
