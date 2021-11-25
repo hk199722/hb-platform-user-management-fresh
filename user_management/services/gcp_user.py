@@ -29,7 +29,12 @@ class GCPUserService:
         return self.gcp_user_repository.list()
 
     def update_gcp_user(self, uid: UUID4, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
-        return self.gcp_user_repository.update(pk=uid, schema=gcp_user)
+        updated_user = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
+
+        # Synchronize GCP Identity Platform.
+        self.gcp_identity_service.sync_gcp_user(gcp_user=updated_user, update=True)
+
+        return updated_user
 
     def delete_gcp_user(self, uid: UUID4) -> None:
         return self.gcp_user_repository.delete(pk=uid)
