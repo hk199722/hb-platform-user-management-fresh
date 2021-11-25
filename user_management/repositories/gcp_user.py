@@ -9,7 +9,7 @@ class GCPUserRepository(AlchemyRepository):
     model = GCPUser
     schema = GCPUserSchema
 
-    def _check_user_role(
+    def _persist_user_role(
         self, schema: NewGCPUserSchema, ready_response: GCPUserSchema
     ) -> GCPUserSchema:
         """Helper method to check up for submitted user roles for a given client."""
@@ -30,10 +30,10 @@ class GCPUserRepository(AlchemyRepository):
         """Overrides base `create` method to handle user roles creation for a given client"""
         response = super().create(schema=schema)
 
-        return self._check_user_role(schema=schema, ready_response=response)
+        return self._persist_user_role(schema=schema, ready_response=response)
 
     def update(self, pk: UUID4, schema: NewGCPUserSchema) -> GCPUserSchema:
         """Overrides base `update` method to handle user roles modifications for a given client."""
         response = super().update(pk=pk, schema=schema)
 
-        return self._check_user_role(schema=schema, ready_response=response)
+        return self._persist_user_role(schema=schema, ready_response=response)
