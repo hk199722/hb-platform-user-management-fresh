@@ -9,6 +9,7 @@ executors:
       IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
     docker:
       - image: circleci/buildpack-deps:buster
+    resource_class: medium
 
 jobs:
   build:
