@@ -68,7 +68,7 @@ jobs:
             docker run --name app-tested \
               --network=host \
               -e DATABASE_URI=postgresql://postgres:password@localhost:5432/postgres \
-              app pytest \
+              --entrypoint pytest app \
               --verbose \
               --junitxml=/test-results/junit.xml \
               --cov=farm_management \
