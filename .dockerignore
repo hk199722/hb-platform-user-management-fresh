@@ -1,9 +1,13 @@
-# Registry of repository files and directories to be ignored by Docker. 
+# Registry of repository files and directories to be ignored by Docker.
 # Anything listed in this file will be excluded of the Docker image.
-.env
-.git
+.circleci
+.mypy_cache
 docker-compose.yaml
 Dockerfile
+.env
+.git
+.gitignore
 *ignore
 .idea
-.gitignore
+.pre-commit-config.yaml
+.pytest_cache
