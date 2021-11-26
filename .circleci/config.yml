@@ -118,11 +118,15 @@ workflows:
             - build
 
       # Staging
+      - hold-stage:
+          type: approval
+          requires:
+            - test
       - push-docker-image:
           name: push-docker-image-staging
           env: staging
           requires:
-            - hold
+            - hold-stage
           context:
             - gcp-secrets
 #          filters:
