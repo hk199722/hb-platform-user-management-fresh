@@ -36,15 +36,48 @@ jobs:
           at: /tmp/workspace
       - setup_remote_docker:
           version: 19.03.14
-      - run: docker load -i /tmp/workspace/image.tar
-      - run: docker run --name app --entrypoint "poetry" $IMAGE_NAME install
-      - run: docker commit app app
-      - run: docker run --entrypoint "black" app --line-length=100 --check .
-      - run: docker run --entrypoint "pylint" app user_management/ tests/ --rcfile=.pylintrc
-      - run: docker run --entrypoint "mypy" app user_management/
-      - run: docker run --entrypoint "pytest" app tests --verbose
+      - run:
+          command: docker load -i /tmp/workspace/image.tar
+          name: Load image from workspace
+      - run:
+          command: |
+            docker run --name localhost \
+              --network=host \
+              -e POSTGRES_PASSWORD=password \
+              -e POSTGRES_DB=postgres \
+              -e POSTGRES_HOST=localhost \
+              -d postgres:13.5-alpine
+          name: Start local PostgreSQL database
+      - run:
+          command: |
+            docker run --name app --entrypoint "poetry" $IMAGE_NAME install
+            docker commit app app
+          name: Install code analysis and test dependencies
+      - run:
+          command: docker run --entrypoint "black" app --line-length=100 --check .
+          name: Coding style checks
+      - run:
+          command: docker run --entrypoint "pylint" app user_management/ tests/ --rcfile=.pylintrc
+          name: Code QA analysis
+      - run:
+          command: docker run --entrypoint "mypy" app user_management/
+          name: Static type checks
+      - run:
+          command: docker run --name app-tested \
+              --network=host \
+              -e DATABASE_URI=postgresql://postgres:password@localhost:5432/postgres \
+              app pytest \
+              --verbose \
+              --junitxml=/test-results/junit.xml \
+              --cov=farm_management \
+              --cov-report=html:/test-results/coverage.html
+            docker cp app-tested:/test-results .
+          name: Run tests
       - store_test_results:
           path: results
+      - store_artifacts:
+          path: test-results/coverage.html
+          destination: coverage-metrics
 
   push-docker-image:
     executor: docker-publisher
