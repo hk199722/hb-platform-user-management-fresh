@@ -6,7 +6,7 @@ orbs:
 executors:
   docker-publisher:
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management-service
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
     docker:
       - image: circleci/buildpack-deps:buster
 
@@ -25,7 +25,7 @@ jobs:
           paths:
             - image.tar
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management-service
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
       DOCKER_BUILDKIT: 1
       GIT_COMMIT: $CIRCLE_SHA1
 
