@@ -11,6 +11,16 @@ executors:
       - image: circleci/buildpack-deps:buster
     resource_class: medium
 
+
+commands:
+  update-poetry:
+    steps:
+      - run:
+          name: Update Poetry version
+          command: |
+            poetry self update
+
+
 jobs:
   build:
     docker:
@@ -98,6 +108,7 @@ jobs:
       DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
     steps:
       - checkout
+      - update-poetry
       - python/install-packages:
           pkg-manager: poetry
           args: -vvv
