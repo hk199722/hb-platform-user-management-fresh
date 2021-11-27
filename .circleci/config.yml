@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   python: circleci/python@1.4.0
 
+
 executors:
   docker-publisher:
     environment:
@@ -10,6 +11,13 @@ executors:
     docker:
       - image: circleci/buildpack-deps:buster
     resource_class: medium
+
+  cloud-sdk:
+    description: The docker container to use when running GCP-GCS commands
+    environment:
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
+    docker:
+      - image: google/cloud-sdk:alpine
 
 
 commands:
