@@ -181,6 +181,9 @@ jobs:
     executor: cloud-sdk
     environment:
       GOOGLE_PROJECT_ID: << parameters.project_id >>
+    parameters:
+      project_id:
+        type: string
     steps:
       - checkout
       - run:
