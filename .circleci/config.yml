@@ -169,6 +169,23 @@ jobs:
           command: docker push $IMAGE_NAME
           name: Push image
 
+  deploy-staging:
+    executor: cloud-sdk
+    environment:
+      GOOGLE_PROJECT_ID: hbt-staging
+    steps:
+      - checkout
+      - run:
+          command: |
+            echo $GSA_KEY | gcloud auth activate-service-account --key-file=-
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+          name: Authenticate gcloud
+      - run:
+          command: |
+            gcloud run deploy user-management --platform managed --region=europe-west1 --allow-unauthenticated --image ${IMAGE_NAME}:staging
+          name: Deploy to Google Cloud Run
+
+
 workflows:
   main:
     jobs:
@@ -191,6 +208,14 @@ workflows:
           filters:
             branches:
               only: main
+      - deploy-staging:
+          requires:
+            - push-docker-image
+          context:
+            - gcp-secrets
+          filters:
+            branches:
+              only: main
 
       # Production
       - hold:
@@ -201,7 +226,7 @@ workflows:
             branches:
               only: main
       - push-docker-image:
-          name: push-docker-image-prod
+          name: push-docker-image-production
           env: prod
           requires:
             - hold
