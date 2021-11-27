@@ -177,10 +177,10 @@ jobs:
           command: docker push $IMAGE_NAME
           name: Push image
 
-  deploy-staging:
+  deploy:
     executor: cloud-sdk
     environment:
-      GOOGLE_PROJECT_ID: hbt-staging
+      GOOGLE_PROJECT_ID: << parameters.project_id >>
     steps:
       - checkout
       - run:
@@ -216,7 +216,9 @@ workflows:
           filters:
             branches:
               only: main
-      - deploy-staging:
+      - deploy:
+          name: deploy-cloud-run-staging
+          project_id: hbt-staging
           requires:
             - push-docker-image-staging
           context:
@@ -238,6 +240,16 @@ workflows:
           env: prod
           requires:
             - hold
+          context:
+            - gcp-secrets
+          filters:
+            branches:
+              only: main
+      - deploy:
+          name: deploy-cloud-run-production
+          project_id: hummingbirdtech-production
+          requires:
+            - push-docker-image-production
           context:
             - gcp-secrets
           filters:
