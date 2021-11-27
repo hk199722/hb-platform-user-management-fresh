@@ -82,6 +82,55 @@ jobs:
           path: test-results/coverage.html
           destination: coverage-metrics
 
+  test-alembic-migrations:
+    docker:
+      - image: cimg/python:3.8.11
+      - image: cimg/postgres:13.4
+        environment:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST: localhost
+      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+    steps:
+      - checkout
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
+      - run:
+          name: Waiting for Postgres to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgres && exit 1
+      - run:
+          command: |
+            num_heads=$(poetry run alembic heads | wc -l)
+            if [[ $num_heads > 1 ]]; then
+              echo "Only a single head is allowed to reduce complexity"
+              exit 1
+            fi
+          name: Check single head
+      - run:
+          command: |
+            head=$(poetry run alembic history | sed -n 's/^\(\w\+\|<base>\) -> \(\w\+\) (head).*.*/\2/p')
+            poetry run alembic upgrade $head
+          name: Full upgrade
+      - run:
+          command: |
+            base=$(poetry run alembic history | sed -n 's/^<base> -> \(\w\+\).*/\1/p')
+            poetry run alembic downgrade $base
+          name: Full downgrade
+
   push-docker-image:
     executor: docker-publisher
     environment:
@@ -113,25 +162,24 @@ workflows:
   main:
     jobs:
       - build
-      - test:
+      - test-alembic-migrations:
           requires:
             - build
+      - test:
+          requires:
+            - test-alembic-migrations
 
       # Staging
-      - hold-stage:
-          type: approval
-          requires:
-            - test
       - push-docker-image:
           name: push-docker-image-staging
           env: staging
           requires:
-            - hold-stage
+            - test
           context:
             - gcp-secrets
-#          filters:
-#            branches:
-#              only: main
+          filters:
+            branches:
+              only: main
 
       # Production
       - hold:
