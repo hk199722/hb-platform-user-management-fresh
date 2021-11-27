@@ -218,7 +218,7 @@ workflows:
               only: main
       - deploy-staging:
           requires:
-            - push-docker-image
+            - push-docker-image-staging
           context:
             - gcp-secrets
           filters:
