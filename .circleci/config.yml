@@ -98,7 +98,6 @@ jobs:
       DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
     steps:
       - checkout
-      - update-poetry
       - python/install-packages:
           pkg-manager: poetry
           args: -vvv
