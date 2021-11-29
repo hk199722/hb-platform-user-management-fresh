@@ -77,17 +77,17 @@ jobs:
           command: poetry install
           name: Install code analysis and test dependencies
       - run:
-          command: black --line-length=100 --check .
+          command: poetry run black --line-length=100 --check .
           name: Coding style checks
       - run:
-          command: pylint user_management/ tests/ --rcfile=.pylintrc
+          command: poetry run pylint user_management/ tests/ --rcfile=.pylintrc
           name: Code QA analysis
       - run:
-          command: mypy user_management/
+          command: poetry run mypy user_management/
           name: Static type checks
       - run:
           command: |
-            pytest app \
+            poetry run pytest app \
               --verbose \
               --junitxml=/test-results/junit.xml \
               --cov=farm_management \
