@@ -19,6 +19,22 @@ executors:
     docker:
       - image: google/cloud-sdk:alpine
 
+  tests-runner:
+    docker:
+      - image: cimg/python:3.10.0
+      - image: cimg/postgres:13.4
+        environment:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+    resource_class: medium
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST: localhost
+      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+
 
 commands:
   update-poetry:
@@ -38,6 +54,11 @@ jobs:
       - checkout
       - setup_remote_docker:
           version: 19.03.14
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
+      - run: poetry build
       - run: docker build --ssh default --progress=plain -t $IMAGE_NAME:latest .
       - run: docker save -o image.tar $IMAGE_NAME
       - persist_to_workspace:
@@ -50,71 +71,41 @@ jobs:
       GIT_COMMIT: $CIRCLE_SHA1
 
   test:
-    executor: docker-publisher
+    executor: tests-runner
     steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - setup_remote_docker:
-          version: 19.03.14
+      - checkout
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
       - run:
-          command: docker load -i /tmp/workspace/image.tar
-          name: Load image from workspace
-      - run:
-          command: |
-            docker run --name localhost \
-              --network=host \
-              -e POSTGRES_PASSWORD=password \
-              -e POSTGRES_DB=postgres \
-              -e POSTGRES_HOST=localhost \
-              -d postgres:13.5-alpine
-          name: Start local PostgreSQL database
-      - run:
-          command: |
-            docker run --name app --entrypoint "poetry" $IMAGE_NAME install
-            docker commit app app
+          command: poetry install
           name: Install code analysis and test dependencies
       - run:
-          command: docker run --entrypoint "black" app --line-length=100 --check .
+          command: poetry run black --line-length=100 --check .
           name: Coding style checks
       - run:
-          command: docker run --entrypoint "pylint" app user_management/ tests/ --rcfile=.pylintrc
+          command: poetry run pylint user_management/ tests/ --rcfile=.pylintrc
           name: Code QA analysis
       - run:
-          command: docker run --entrypoint "mypy" app user_management/
+          command: poetry run mypy user_management/
           name: Static type checks
       - run:
           command: |
-            docker run --name app-tested \
-              --network=host \
-              -e DATABASE_URI=postgresql://postgres:password@localhost:5432/postgres \
-              --entrypoint pytest app \
+            poetry run pytest \
               --verbose \
-              --junitxml=/test-results/junit.xml \
+              --junitxml=$HOME/test-results/junit.xml \
               --cov=farm_management \
-              --cov-report=html:/test-results/coverage.html
-            docker cp app-tested:/test-results .
+              --cov-report=html:$HOME/test-results/coverage.html
           name: Run tests
       - store_test_results:
           path: results
       - store_artifacts:
-          path: test-results/coverage.html
+          path: $HOME/test-results/coverage.html
           destination: coverage-metrics
 
   test-alembic-migrations:
-    docker:
-      - image: cimg/python:3.10.0
-      - image: cimg/postgres:13.4
-        environment:
-          POSTGRES_DB: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-    resource_class: medium
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_HOST: localhost
-      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+    executor: tests-runner
     steps:
       - checkout
       - update-poetry
