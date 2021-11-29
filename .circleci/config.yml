@@ -19,6 +19,22 @@ executors:
     docker:
       - image: google/cloud-sdk:alpine
 
+  tests-runner:
+    docker:
+      - image: cimg/python:3.10.0
+      - image: cimg/postgres:13.4
+        environment:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+    resource_class: medium
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST: localhost
+      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+
 
 commands:
   update-poetry:
@@ -101,20 +117,21 @@ jobs:
           destination: coverage-metrics
 
   test-alembic-migrations:
-    docker:
-      - image: cimg/python:3.10.0
-      - image: cimg/postgres:13.4
-        environment:
-          POSTGRES_DB: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-    resource_class: medium
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_HOST: localhost
-      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+    executor: tests-runner
+#    docker:
+#      - image: cimg/python:3.10.0
+#      - image: cimg/postgres:13.4
+#        environment:
+#          POSTGRES_DB: postgres
+#          POSTGRES_USER: postgres
+#          POSTGRES_PASSWORD: password
+#    resource_class: medium
+#    environment:
+#      POSTGRES_DB: postgres
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: password
+#      POSTGRES_HOST: localhost
+#      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
     steps:
       - checkout
       - update-poetry
