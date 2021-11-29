@@ -613,8 +613,9 @@ def test_delete_sync_gcp_user_errors(
     response = test_client.delete(f"/api/v1/users/{user_uid}")
 
     assert response.status_code == expected_status
-    assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
-    # Check that user Client is still there.
+    # Check that User and its Client is still there. Users must be first deleted from GCP-IP backend
+    # and later from local DB. If any problem occurs in GCP-IP the user must remain in DB as well.
+    assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 1
     assert (
         test_db_session.scalar(
             select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)

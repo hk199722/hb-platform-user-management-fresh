@@ -41,5 +41,5 @@ class GCPUserService:
 
     def delete_gcp_user(self, uid: UUID4) -> None:
         """Deletes `GCPUser` from local database, and also from GCP Identity Platform."""
-        self.gcp_user_repository.delete(pk=uid)
         self.gcp_identity_service.remove_gcp_user(uid=uid)
+        self.gcp_user_repository.delete(pk=uid)
