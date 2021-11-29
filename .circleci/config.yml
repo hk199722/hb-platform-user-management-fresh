@@ -54,6 +54,11 @@ jobs:
       - checkout
       - setup_remote_docker:
           version: 19.03.14
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
+      - run: poetry build
       - run: docker build --ssh default --progress=plain -t $IMAGE_NAME:latest .
       - run: docker save -o image.tar $IMAGE_NAME
       - persist_to_workspace:
@@ -89,14 +94,14 @@ jobs:
           command: |
             poetry run pytest app \
               --verbose \
-              --junitxml=/test-results/junit.xml \
+              --junitxml=$HOME/test-results/junit.xml \
               --cov=farm_management \
-              --cov-report=html:/test-results/coverage.html
+              --cov-report=html:$HOME/test-results/coverage.html
           name: Run tests
       - store_test_results:
           path: results
       - store_artifacts:
-          path: test-results/coverage.html
+          path: $HOME/test-results/coverage.html
           destination: coverage-metrics
 
   test-alembic-migrations:
