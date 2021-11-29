@@ -193,7 +193,11 @@ jobs:
           name: Authenticate gcloud
       - run:
           command: |
-            gcloud run deploy user-management --platform managed --region=europe-west1 --allow-unauthenticated --image ${IMAGE_NAME}:staging
+            gcloud run deploy user-management \
+              --platform managed \
+              --region=europe-west1 \
+              --allow-unauthenticated \
+              --image ${IMAGE_NAME}:<< parameters.env >>
           name: Deploy to Google Cloud Run
 
 
@@ -222,6 +226,7 @@ workflows:
       - deploy:
           name: deploy-cloud-run-staging
           project_id: hbt-staging
+          env: staging
           requires:
             - push-docker-image-staging
           context:
@@ -251,6 +256,7 @@ workflows:
       - deploy:
           name: deploy-cloud-run-production
           project_id: hummingbirdtech-production
+          env: prod
           requires:
             - push-docker-image-production
           context:
