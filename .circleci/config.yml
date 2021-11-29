@@ -92,7 +92,7 @@ jobs:
           name: Static type checks
       - run:
           command: |
-            poetry run pytest app \
+            poetry run pytest \
               --verbose \
               --junitxml=$HOME/test-results/junit.xml \
               --cov=farm_management \
