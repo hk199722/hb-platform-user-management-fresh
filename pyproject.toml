@@ -4,6 +4,9 @@ version = "0.0.1"
 description = "Hummingbird Platform users management service"
 authors = ["HB Engineering <dev@hummingbirdtech.com>"]
 license = "Proprietary"
+packages = [
+    {include = "user_management"}
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -16,6 +19,8 @@ gunicorn = "^20.1.0"
 uvicorn = "^0.15.0"
 pydantic = {extras = ["email", "dotenv"], version = "^1.8.2"}
 firebase-admin = "^5.1.0"
+requests = "^2.26.0"
+virtualenv = "^20.10.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.10b0"
@@ -24,7 +29,10 @@ pre-commit = "^2.15.0"
 pylint = "^2.11.1"
 pytest = "^6.2.5"
 factory-boy = "^3.2.1"
-requests = "^2.26.0"
+pytest-cov = "^3.0.0"
+
+[tool.poetry.scripts]
+user_management = "user_management.main:create_app"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
