@@ -3,21 +3,62 @@ version: 2.1
 orbs:
   python: circleci/python@1.4.0
 
+
 executors:
   docker-publisher:
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management-service
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
     docker:
       - image: circleci/buildpack-deps:buster
+    resource_class: medium
+
+  cloud-sdk:
+    description: The docker container to use when running GCP-GCS commands
+    environment:
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
+    docker:
+      - image: google/cloud-sdk:alpine
+
+  tests-runner:
+    docker:
+      - image: cimg/python:3.10.0
+      - image: cimg/postgres:13.4
+        environment:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+    resource_class: medium
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST: localhost
+      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+
+
+commands:
+  update-poetry:
+    steps:
+      - run:
+          name: Update Poetry version
+          command: |
+            poetry self update
+
 
 jobs:
   build:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10.0
+    resource_class: medium
     steps:
       - checkout
       - setup_remote_docker:
           version: 19.03.14
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
+      - run: poetry build
       - run: docker build --ssh default --progress=plain -t $IMAGE_NAME:latest .
       - run: docker save -o image.tar $IMAGE_NAME
       - persist_to_workspace:
@@ -25,26 +66,80 @@ jobs:
           paths:
             - image.tar
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management-service
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
       DOCKER_BUILDKIT: 1
       GIT_COMMIT: $CIRCLE_SHA1
 
   test:
-    executor: docker-publisher
+    executor: tests-runner
     steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - setup_remote_docker:
-          version: 19.03.14
-      - run: docker load -i /tmp/workspace/image.tar
-      - run: docker run --name app --entrypoint "poetry" $IMAGE_NAME install
-      - run: docker commit app app
-      - run: docker run --entrypoint "black" app --line-length=100 --check .
-      - run: docker run --entrypoint "pylint" app user_management/ tests/ --rcfile=.pylintrc
-      - run: docker run --entrypoint "mypy" app user_management/
-      - run: docker run --entrypoint "pytest" app tests --verbose
+      - checkout
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
+      - run:
+          command: poetry install
+          name: Install code analysis and test dependencies
+      - run:
+          command: poetry run black --line-length=100 --check .
+          name: Coding style checks
+      - run:
+          command: poetry run pylint user_management/ tests/ --rcfile=.pylintrc
+          name: Code QA analysis
+      - run:
+          command: poetry run mypy user_management/
+          name: Static type checks
+      - run:
+          command: |
+            poetry run pytest \
+              --verbose \
+              --junitxml=$HOME/test-results/junit.xml \
+              --cov=farm_management \
+              --cov-report=html:$HOME/test-results/coverage.html
+          name: Run tests
       - store_test_results:
           path: results
+      - store_artifacts:
+          path: $HOME/test-results/coverage.html
+          destination: coverage-metrics
+
+  test-alembic-migrations:
+    executor: tests-runner
+    steps:
+      - checkout
+      - update-poetry
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -vvv
+      - run:
+          name: Waiting for Postgres to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgres && exit 1
+      - run:
+          command: |
+            num_heads=$(poetry run alembic heads | wc -l)
+            if [[ $num_heads > 1 ]]; then
+              echo "Only a single head is allowed to reduce complexity"
+              exit 1
+            fi
+          name: Check single head
+      - run:
+          command: |
+            head=$(poetry run alembic history | sed -n 's/^\(\w\+\|<base>\) -> \(\w\+\) (head).*.*/\2/p')
+            poetry run alembic upgrade $head
+          name: Full upgrade
+      - run:
+          command: |
+            base=$(poetry run alembic history | sed -n 's/^<base> -> \(\w\+\).*/\1/p')
+            poetry run alembic downgrade $base
+          name: Full downgrade
 
   push-docker-image:
     executor: docker-publisher
@@ -73,15 +168,44 @@ jobs:
           command: docker push $IMAGE_NAME
           name: Push image
 
+  deploy:
+    executor: cloud-sdk
+    environment:
+      GOOGLE_PROJECT_ID: << parameters.project_id >>
+    parameters:
+      env:
+        type: string
+      project_id:
+        type: string
+    steps:
+      - checkout
+      - run:
+          command: |
+            echo $GSA_KEY | gcloud auth activate-service-account --key-file=-
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+          name: Authenticate gcloud
+      - run:
+          command: |
+            gcloud run deploy user-management \
+              --platform managed \
+              --region=europe-west1 \
+              --allow-unauthenticated \
+              --image ${IMAGE_NAME}:<< parameters.env >>
+          name: Deploy to Google Cloud Run
+
+
 workflows:
   main:
     jobs:
       - build
-      - test:
+      - test-alembic-migrations:
           requires:
             - build
+      - test:
+          requires:
+            - test-alembic-migrations
 
-      # staging
+      # Staging
       - push-docker-image:
           name: push-docker-image-staging
           env: staging
@@ -91,9 +215,20 @@ workflows:
             - gcp-secrets
           filters:
             branches:
-              only: develop
+              only: main
+      - deploy:
+          name: deploy-cloud-run-staging
+          project_id: hbt-staging
+          env: staging
+          requires:
+            - push-docker-image-staging
+          context:
+            - gcp-secrets
+          filters:
+            branches:
+              only: main
 
-      # prod
+      # Production
       - hold:
           type: approval
           requires:
@@ -102,10 +237,21 @@ workflows:
             branches:
               only: main
       - push-docker-image:
-          name: push-docker-image-prod
+          name: push-docker-image-production
           env: prod
           requires:
             - hold
+          context:
+            - gcp-secrets
+          filters:
+            branches:
+              only: main
+      - deploy:
+          name: deploy-cloud-run-production
+          project_id: hummingbirdtech-production
+          env: prod
+          requires:
+            - push-docker-image-production
           context:
             - gcp-secrets
           filters:

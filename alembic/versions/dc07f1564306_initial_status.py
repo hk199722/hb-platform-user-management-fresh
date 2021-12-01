@@ -17,6 +17,7 @@ depends_on = None
 
 
 def upgrade():
+    op.execute(sa.text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
     op.create_table(
         "client",
         sa.Column(
