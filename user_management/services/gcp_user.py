@@ -15,7 +15,7 @@ class GCPUserService:
 
     def create_gcp_user(self, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
         """Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform."""
-        created_user = self.gcp_user_repository.create(schema=gcp_user)
+        created_user: GCPUserSchema = self.gcp_user_repository.create(schema=gcp_user)
 
         # Synchronize GCP Identity Platform.
         self.gcp_identity_service.sync_gcp_user(gcp_user=created_user)
@@ -32,7 +32,7 @@ class GCPUserService:
 
     def update_gcp_user(self, uid: UUID4, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
         """Updates `GCPUser` data in database and synchronizes it with GCP Identity Platform."""
-        updated_user = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
+        updated_user: GCPUserSchema = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
 
         # Synchronize GCP Identity Platform.
         self.gcp_identity_service.sync_gcp_user(gcp_user=updated_user, update=True)
