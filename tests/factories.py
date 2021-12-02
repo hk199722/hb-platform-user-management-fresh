@@ -1,3 +1,4 @@
+import random
 import uuid
 
 import factory
@@ -36,7 +37,7 @@ class GCPUserFactory(BaseModelFactory):
     uid = factory.Sequence(lambda n: uuid.uuid4())
     name = factory.Sequence(lambda n: f"GCPUser-{n}")
     email = factory.Sequence(lambda n: f"user-{n}@hummingbirdtech.com")
-    phone_number = "+44 020 8123 2389"
+    phone_number = factory.LazyFunction(lambda: f"+44{random.randint(2000000000,3999999999)}")
 
     class Meta:
         model = GCPUser
