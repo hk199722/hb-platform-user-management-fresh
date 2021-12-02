@@ -197,9 +197,11 @@ def test_create_gcp_user(
         ),
     ],
 )
+@patch("user_management.services.gcp_identity.init_identity_platform_app")
 @patch("user_management.services.gcp_identity.create_user")
 def test_create_sync_gcp_user_errors(
     mock_identity_platform,
+    mock_init_gcp_ip_app,  # Mock initializing GCP-IP/Firebase app. pylint: disable=unused-argument
     test_client,
     test_db_session,
     sql_factory,
@@ -499,9 +501,11 @@ def test_update_gcp_user(
         ),
     ],
 )
+@patch("user_management.services.gcp_identity.init_identity_platform_app")
 @patch("user_management.services.gcp_identity.update_user")
 def test_update_sync_gcp_user_errors(
     mock_identity_platform,
+    mock_init_gcp_ip_app,  # Mock initializing GCP-IP/Firebase app. pylint: disable=unused-argument
     test_client,
     test_db_session,
     sql_factory,
