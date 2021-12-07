@@ -7,7 +7,7 @@ orbs:
 executors:
   docker-publisher:
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/platform/hb-platform-user-management
     docker:
       - image: circleci/buildpack-deps:buster
     resource_class: medium
@@ -15,7 +15,7 @@ executors:
   cloud-sdk:
     description: The docker container to use when running GCP-GCS commands
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/platform/hb-platform-user-management
     docker:
       - image: google/cloud-sdk:alpine
 
@@ -66,7 +66,7 @@ jobs:
           paths:
             - image.tar
     environment:
-      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/services/hb-platform-user-management
+      IMAGE_NAME: eu.gcr.io/hummingbird-technologies/platform/hb-platform-user-management
       DOCKER_BUILDKIT: 1
       GIT_COMMIT: $CIRCLE_SHA1
 
