@@ -15,7 +15,7 @@ from user_management.core.config.settings import get_settings
 from user_management.core.database import Base
 
 
-database_uri = get_settings().database_uri
+database_url = get_settings().database_url
 
 
 # this is the Alembic Config object, which provides
@@ -32,13 +32,13 @@ fileConfig(config.config_file_name)  # type: ignore
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata  # type: ignore
 
-print(f"Database url: {database_uri}")
+print(f"Database URL: {database_url}")
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-config.set_main_option("sqlalchemy.url", database_uri)
+config.set_main_option("sqlalchemy.url", database_url)
 
 
 def run_migrations_offline():

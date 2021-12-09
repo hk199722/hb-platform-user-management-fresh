@@ -12,7 +12,7 @@ def db_session_factory() -> sessionmaker:
     """Sessions registry for PostgreSQL Farm Management database."""
     settings = get_settings()
     engine = create_engine(
-        settings.database_uri,
+        settings.database_url,
         pool_pre_ping=True,
         pool_recycle=settings.database_pool_recycle,
         pool_size=settings.database_pool_size,

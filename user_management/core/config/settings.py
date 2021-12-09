@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     project_root: DirectoryPath = Path(__file__).resolve().parent.parent.parent.parent
 
     # Database
-    database_uri: PostgresDsn
+    database_url: PostgresDsn
     database_pool_size: int = 40
     database_max_overflow: int = 10
     database_pool_recycle: int = 3600

@@ -33,7 +33,7 @@ executors:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_HOST: localhost
-      DATABASE_URI: postgresql://postgres:password@localhost:5432/postgres
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
 
 
 commands:
