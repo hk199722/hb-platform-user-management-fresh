@@ -186,7 +186,7 @@ jobs:
           name: Authenticate gcloud
       - run:
           command: |
-            gcloud run deploy user-management \
+            gcloud run deploy user-management-api \
               --platform managed \
               --region=europe-west1 \
               --allow-unauthenticated \
