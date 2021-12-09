@@ -22,7 +22,7 @@ from tests.factories import SQLModelFactory
 @functools.lru_cache
 def get_database_name():
     settings = get_settings()
-    return f"{settings.database_uri.path.lstrip('/')}_test_{os.getpid()}"
+    return f"{settings.database_url.path.lstrip('/')}_test_{os.getpid()}"
 
 
 def create_test_db_session(db_name: str, manager: bool = False) -> scoped_session:
@@ -33,16 +33,16 @@ def create_test_db_session(db_name: str, manager: bool = False) -> scoped_sessio
     """
     settings = get_settings()
 
-    database_uri = PostgresDsn.build(
+    database_url = PostgresDsn.build(
         scheme="postgresql",
-        user=settings.database_uri.user,
-        password=settings.database_uri.password,
-        host=settings.database_uri.host,
-        port=settings.database_uri.port,
+        user=settings.database_url.user,
+        password=settings.database_url.password,
+        host=settings.database_url.host,
+        port=settings.database_url.port,
         path=f"/{db_name}" if manager is False else None,
     )
 
-    engine = create_engine(database_uri, pool_pre_ping=True)
+    engine = create_engine(database_url, pool_pre_ping=True)
     session_factory = sessionmaker(autocommit=False, autoflush=True, bind=engine)
     return scoped_session(session_factory)
 
