@@ -432,7 +432,7 @@ def test_update_gcp_user(
             client_user = test_db_session.scalar(
                 select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=client_1.uid)
             )
-            assert client_user is not None
+            assert client_user in modified_user.clients
 
 
 @pytest.mark.parametrize(
