@@ -567,7 +567,7 @@ def test_delete_gcp_user(
 ):
     mock_identity_platform().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    user_client = sql_factory.client_user.create(user=gcp_user)
+    client_user = sql_factory.client_user.create(user=gcp_user)
     test_db_session.commit()
 
     response = test_client.delete(f"/api/v1/users/{user_uid}")
@@ -578,9 +578,19 @@ def test_delete_gcp_user(
         # Check that user Client is still there.
         assert (
             test_db_session.scalar(
-                select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
+                select(func.count()).select_from(Client).filter_by(uid=client_user.client_uid)
             )
             == 1
+        )
+
+        # Check that the related ClientUser is also removed.
+        assert (
+            test_db_session.scalar(
+                select(func.count())
+                .select_from(ClientUser)
+                .filter_by(client=client_user.client, user=client_user.user)
+            )
+            == 0
         )
 
 
