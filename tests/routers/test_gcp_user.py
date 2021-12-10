@@ -415,6 +415,13 @@ def test_update_gcp_user(
 
     assert response.status_code == expected_status
     if response.status_code == status.HTTP_200_OK:
+        # Check response payload.
+        data = response.json()
+        assert data["name"] == user_name
+        assert data["phone_number"] == user_phone
+        assert data["email"] == user_email
+
+        # Check that user data was effectively updated in DB.
         test_db_session.expire_all()
         modified_user = test_db_session.get(GCPUser, user_uid)
         assert modified_user.name == user_name
