@@ -43,3 +43,9 @@ class GCPUserService:
         """Deletes `GCPUser` from local database, and also from GCP Identity Platform."""
         self.gcp_identity_service.remove_gcp_user(uid=uid)
         self.gcp_user_repository.delete(pk=uid)
+
+    def delete_gcp_user_role(self, uid: UUID4, client_uid: UUID4) -> None:
+        """Deletes `ClientUser` associative object from local database, given a `GCPUser.uid` and a
+        `Client.uid`.
+        """
+        self.gcp_user_repository.delete_client_user(gcp_user=uid, client=client_uid)

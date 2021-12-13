@@ -34,3 +34,8 @@ def update_gcp_user(uid: UUID4, gcp_user: NewGCPUserSchema, db: DBSession = Depe
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_gcp_user(uid: UUID4, db: DBSession = Depends(get_database)):
     return GCPUserService(db).delete_gcp_user(uid=uid)
+
+
+@router.delete("/{uid}/roles/{client_uid}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_gcp_user_role(uid: UUID4, client_uid: UUID4, db: DBSession = Depends(get_database)):
+    return GCPUserService(db).delete_gcp_user_role(uid=uid, client_uid=client_uid)

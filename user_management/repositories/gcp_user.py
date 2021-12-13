@@ -1,5 +1,6 @@
 from pydantic import BaseModel, UUID4
 
+from user_management.core.exceptions import ResourceNotFoundError
 from user_management.models import GCPUser, ClientUser
 from user_management.repositories.base import AlchemyRepository, Schema
 from user_management.schemas import ClientUserSchema, GCPUserSchema
@@ -36,3 +37,16 @@ class GCPUserRepository(AlchemyRepository):
         response = super().update(pk=pk, schema=schema)
 
         return self._persist_user_role(schema=schema, ready_response=response)
+
+    def delete_client_user(self, gcp_user: UUID4, client: UUID4) -> None:
+        """Given a `GCPUser` UUID and a `Client` UUID, it finds the associative object between both
+        and deletes its row in the database.
+        """
+        if client_user := self.db.get(ClientUser, {"gcp_user_uid": gcp_user, "client_uid": client}):
+            self.db.delete(client_user)
+            self.db.commit()
+            return self.db.flush()
+
+        raise ResourceNotFoundError(
+            {"message": f"User {gcp_user} doesn't have a role with Client {client}."}
+        )
