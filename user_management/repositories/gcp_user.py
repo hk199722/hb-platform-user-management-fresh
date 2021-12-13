@@ -44,8 +44,7 @@ class GCPUserRepository(AlchemyRepository):
         """
         if client_user := self.db.get(ClientUser, {"gcp_user_uid": gcp_user, "client_uid": client}):
             self.db.delete(client_user)
-            self.db.commit()
-            return self.db.flush()
+            return self.db.commit()
 
         raise ResourceNotFoundError(
             {"message": f"User {gcp_user} doesn't have a role with Client {client}."}
