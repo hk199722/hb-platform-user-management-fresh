@@ -415,6 +415,13 @@ def test_update_gcp_user(
 
     assert response.status_code == expected_status
     if response.status_code == status.HTTP_200_OK:
+        # Check response payload.
+        data = response.json()
+        assert data["name"] == user_name
+        assert data["phone_number"] == user_phone
+        assert data["email"] == user_email
+
+        # Check that user data was effectively updated in DB.
         test_db_session.expire_all()
         modified_user = test_db_session.get(GCPUser, user_uid)
         assert modified_user.name == user_name
@@ -432,7 +439,7 @@ def test_update_gcp_user(
             client_user = test_db_session.scalar(
                 select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=client_1.uid)
             )
-            assert client_user is not None
+            assert client_user in modified_user.clients
 
 
 @pytest.mark.parametrize(
@@ -567,7 +574,7 @@ def test_delete_gcp_user(
 ):
     mock_identity_platform().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    user_client = sql_factory.client_user.create(user=gcp_user)
+    client_user = sql_factory.client_user.create(user=gcp_user)
     test_db_session.commit()
 
     response = test_client.delete(f"/api/v1/users/{user_uid}")
@@ -578,9 +585,19 @@ def test_delete_gcp_user(
         # Check that user Client is still there.
         assert (
             test_db_session.scalar(
-                select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
+                select(func.count()).select_from(Client).filter_by(uid=client_user.client_uid)
             )
             == 1
+        )
+
+        # Check that the related ClientUser is also removed.
+        assert (
+            test_db_session.scalar(
+                select(func.count())
+                .select_from(ClientUser)
+                .filter_by(client=client_user.client, user=client_user.user)
+            )
+            == 0
         )
 
 
@@ -625,4 +642,24 @@ def test_delete_sync_gcp_user_errors(
             select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
         )
         == 1
+    )
+
+
+def test_delete_client_user(test_client, test_db_session, sql_factory):
+    client_user = sql_factory.client_user.create()
+
+    response = test_client.delete(
+        f"/api/v1/users/{client_user.gcp_user_uid}/roles/{client_user.client_uid}"
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Check that the object has been effectively deleted from the database.
+    assert (
+        test_db_session.scalar(
+            select(func.count())
+            .select_from(ClientUser)
+            .filter_by(client=client_user.client, user=client_user.user)
+        )
+        == 0
     )

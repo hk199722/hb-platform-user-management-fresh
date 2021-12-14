@@ -22,7 +22,7 @@ class ClientUser(Base):
     gcp_user_uid = Column(ForeignKey("gcp_user.uid", ondelete="CASCADE"), primary_key=True)
     role = Column(SQLEnum(Role), nullable=False)
 
-    user = relationship("GCPUser", back_populates="clients", cascade="all, delete")
+    user = relationship("GCPUser", back_populates="clients")
     client = relationship("Client", back_populates="users")
 
     def __repr__(self):

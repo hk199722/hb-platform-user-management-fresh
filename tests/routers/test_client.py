@@ -3,7 +3,7 @@ import pytest
 from fastapi import status
 from sqlalchemy import func, select
 
-from user_management.models import Client, GCPUser
+from user_management.models import Client, GCPUser, ClientUser
 
 
 @pytest.mark.parametrize(
@@ -82,17 +82,41 @@ def test_list_clients(test_client, sql_factory):
     ],
 )
 def test_delete_client(test_client, test_db_session, sql_factory, client_uid, expected_status):
+    # Create a Client and assign 3 GCPUsers.
     client = sql_factory.client.create(uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
     sql_factory.client_user.create_batch(size=3, client=client)
+
+    # Now, create a GCPUser and assign it to the initial Client and also to another Client.
+    client_user = sql_factory.client_user.create()
+    sql_factory.client_user.create(client=client, user=client_user.user)  # Initial Client.
     test_db_session.commit()
 
     response = test_client.delete(f"/api/v1/clients/{client_uid}")
 
     assert response.status_code == expected_status
     if expected_status == status.HTTP_204_NO_CONTENT:
-        # Check that client users have been deleted.
-        assert test_db_session.scalar(select(func.count()).select_from(Client)) == 0
-        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
+        # Check that client users have been deleted...
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(Client).filter_by(uid=client.uid)
+            )
+            == 0
+        )
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(ClientUser).filter_by(client=client)
+            )
+            == 0
+        )
+        # ...except the one created last, which also belongs to another Client, so it must remain.
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(ClientUser).filter_by(client=client_user.client)
+            )
+            == 1
+        )
+        # GCPUsers are still in the system.
+        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 4
 
 
 @pytest.mark.parametrize(

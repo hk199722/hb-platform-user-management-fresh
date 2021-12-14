@@ -43,7 +43,7 @@ def create_test_db_session(db_name: str, manager: bool = False) -> scoped_sessio
     )
 
     engine = create_engine(database_url, pool_pre_ping=True)
-    session_factory = sessionmaker(autocommit=False, autoflush=True, bind=engine)
+    session_factory = sessionmaker(autoflush=True, bind=engine)
     return scoped_session(session_factory)
 
 
