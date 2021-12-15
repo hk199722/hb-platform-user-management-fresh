@@ -17,7 +17,9 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("gcp_user", sa.Column("staff", sa.Boolean(), nullable=False))
+    op.add_column("gcp_user", sa.Column("staff", sa.Boolean(), nullable=True))
+    op.execute("UPDATE gcp_user SET staff = FALSE")
+    op.alter_column("gcp_user", "staff", nullable=False)
 
 
 def downgrade():
