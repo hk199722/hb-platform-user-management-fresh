@@ -37,19 +37,20 @@ class ClientUserSchema(BaseModel):
 
 
 class BaseUserModel(NamedModel):
-    phone_number: str = ""
+    phone_number: Optional[str] = ""
     email: EmailStr
     staff: bool = False
 
     @validator("phone_number")
     def valid_phone_number(cls, value):  # pylint: disable=no-self-argument
-        if value and PHONE_PATTERN.match(value) is None:
-            raise ValueError(
-                f"{value} is not a valid phone number. Accepted phone numbers are E.164 compliant "
-                f"(+<area code><phone number>)."
-            )
+        if value:
+            if PHONE_PATTERN.match(value) is None:
+                raise ValueError(
+                    f"{value} is not a valid phone number. Accepted phone numbers are E.164 "
+                    f"compliant (+<area code><phone number>)."
+                )
 
-        return value.replace(" ", "")
+            return value.replace(" ", "")
 
 
 class GCPUserSchema(BaseUserModel):
