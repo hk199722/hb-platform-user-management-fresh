@@ -36,8 +36,10 @@ class ClientUserSchema(BaseModel):
         orm_mode = True
 
 
-class NamedPhoneModel(NamedModel):
+class BaseUserModel(NamedModel):
     phone_number: str = ""
+    email: EmailStr
+    staff: bool = False
 
     @validator("phone_number")
     def valid_phone_number(cls, value):  # pylint: disable=no-self-argument
@@ -50,17 +52,15 @@ class NamedPhoneModel(NamedModel):
         return value.replace(" ", "")
 
 
-class GCPUserSchema(NamedPhoneModel):
+class GCPUserSchema(BaseUserModel):
     uid: UUID4
-    email: EmailStr
     clients: List[ClientUserSchema]
 
     class Config:
         orm_mode = True
 
 
-class NewGCPUserSchema(NamedPhoneModel):
-    email: EmailStr
+class NewGCPUserSchema(BaseUserModel):
     role: Optional[ClientUserSchema] = None
 
 

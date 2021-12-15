@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Dict, TypedDict, Union
 
 from pydantic import UUID4
 
@@ -21,10 +21,13 @@ from user_management.core.exceptions import (
     ResourceNotFoundError,
 )
 from user_management.core.firebase import init_identity_platform_app
+from user_management.models import Role
 from user_management.schemas import GCPUserSchema
 
 
 logger = logging.getLogger(__name__)
+
+Claims = TypedDict("Claims", {"roles": Dict[UUID4, Role], "staff": bool}, total=False)
 
 
 class GCPIdentityPlatformService:
@@ -78,11 +81,24 @@ class GCPIdentityPlatformService:
         except Exception as error:  # pylint: disable=broad-except
             self._handle_gcp_exception(error, gcp_user)
 
-        if gcp_user.clients:
-            roles = {client_user.client_uid: client_user.role for client_user in gcp_user.clients}
+        # Update user claims, if needed.
+        claims: Claims = {}
 
+        if gcp_user.clients:
+            claims.update(
+                {
+                    "roles": {
+                        client_user.client_uid: client_user.role for client_user in gcp_user.clients
+                    }
+                }
+            )
+
+        if gcp_user.staff is True:
+            claims.update({"staff": True})
+
+        if claims:
             try:
-                set_custom_user_claims(gcp_user.uid, {"roles": roles})
+                set_custom_user_claims(gcp_user.uid, claims)
             except Exception as error:  # pylint: disable=broad-except
                 self._handle_gcp_exception(error, gcp_user)
 
