@@ -27,7 +27,7 @@ from user_management.schemas import GCPUserSchema
 
 logger = logging.getLogger(__name__)
 
-Claims = TypedDict("Claims", {"roles": Dict[UUID4, Role], "staff": bool}, total=False)
+Claims = TypedDict("Claims", {"roles": Dict[str, Role.value], "staff": bool}, total=False)
 
 
 class GCPIdentityPlatformService:
@@ -50,7 +50,7 @@ class GCPIdentityPlatformService:
         }
 
         exception_class, message = map_exceptions[type(error)]
-        context = {"message": message}
+        context: dict = {"message": message}
 
         # Build exception response context with the available data.
         if isinstance(gcp_user, GCPUserSchema):
@@ -88,7 +88,8 @@ class GCPIdentityPlatformService:
             claims.update(
                 {
                     "roles": {
-                        client_user.client_uid: client_user.role for client_user in gcp_user.clients
+                        str(client_user.client_uid): client_user.role.value
+                        for client_user in gcp_user.clients
                     }
                 }
             )
@@ -98,7 +99,7 @@ class GCPIdentityPlatformService:
 
         if claims:
             try:
-                set_custom_user_claims(gcp_user.uid, claims)
+                set_custom_user_claims(str(gcp_user.uid), claims)
             except Exception as error:  # pylint: disable=broad-except
                 self._handle_gcp_exception(error, gcp_user)
 
