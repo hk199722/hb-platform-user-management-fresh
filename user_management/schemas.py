@@ -10,11 +10,14 @@ PHONE_PATTERN = re.compile(r"\+[0-9 ]+")
 
 
 class NamedModel(BaseModel):
-    name: str
+    name: Optional[str]
 
     @validator("name", pre=True, always=True)
     def empty_string(cls, value):  # pylint: disable=no-self-argument
-        return value if value != "" else None
+        if value == "":
+            raise ValueError("Empty names are not allowed.")
+
+        return value
 
 
 class ClientSchema(NamedModel):
@@ -62,6 +65,11 @@ class GCPUserSchema(BaseUserModel):
 
 
 class NewGCPUserSchema(BaseUserModel):
+    role: Optional[ClientUserSchema] = None
+
+
+class UpdateGCPUserSchema(BaseUserModel):
+    email: Optional[EmailStr]
     role: Optional[ClientUserSchema] = None
 
 
