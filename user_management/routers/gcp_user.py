@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database
-from user_management.schemas import GCPUserSchema, NewGCPUserSchema
+from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
 from user_management.services.gcp_user import GCPUserService
 
 
@@ -27,7 +27,9 @@ def list_gcp_users(db: DBSession = Depends(get_database)):
 
 
 @router.patch("/{uid}", response_model=GCPUserSchema)
-def update_gcp_user(uid: UUID4, gcp_user: NewGCPUserSchema, db: DBSession = Depends(get_database)):
+def update_gcp_user(
+    uid: UUID4, gcp_user: UpdateGCPUserSchema, db: DBSession = Depends(get_database)
+):
     return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user)
 
 
