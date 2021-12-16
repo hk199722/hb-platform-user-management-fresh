@@ -38,6 +38,7 @@ class GCPUserFactory(BaseModelFactory):
     name = factory.Sequence(lambda n: f"GCPUser-{n}")
     email = factory.Sequence(lambda n: f"user-{n}@hummingbirdtech.com")
     phone_number = factory.LazyFunction(lambda: f"+44{random.randint(2000000000,3999999999)}")
+    staff = factory.fuzzy.FuzzyChoice([True, False])
 
     class Meta:
         model = GCPUser
