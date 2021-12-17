@@ -343,13 +343,15 @@ def test_update_gcp_user_success(
     data = response.json()
 
     assert response.status_code == expected_status, data
+
+    test_db_session.expire_all()
+    modified_user = test_db_session.get(GCPUser, user_uid)
+
     for key, value in patch_payload.items():
         # Check response payload.
         assert data[key] == value
 
         # Check that user data was effectively updated in DB.
-        test_db_session.expire_all()
-        modified_user = test_db_session.get(GCPUser, user_uid)
         assert getattr(modified_user, key) == value
 
 
