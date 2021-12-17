@@ -10,6 +10,7 @@ PHONE_PATTERN = re.compile(r"\+[0-9 ]+")
 
 
 def check_empty_string(value: str) -> str:
+    """Checks that the submitted values are not empty strings."""
     if value == "":
         raise ValueError("Empty names are not allowed.")
 
@@ -17,6 +18,7 @@ def check_empty_string(value: str) -> str:
 
 
 def check_phone_number(value: Optional[str]) -> Optional[str]:
+    """Normalizes the submitted phone numbers by trimming spaces in the string."""
     if value:
         if PHONE_PATTERN.match(value) is None:
             raise ValueError(
