@@ -143,7 +143,7 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
     def update(self, pk: Any, schema: BaseModel) -> Schema:
         """Updates a single object from a DB table, given its primary key value."""
         entity = self._select_from_db(pk=pk)
-        for key, val in schema.dict().items():
+        for key, val in schema.dict(exclude_unset=True).items():
             setattr(entity, key, val)
         if hasattr(entity, "updated_at"):
             setattr(entity, "updated_at", datetime.now(timezone.utc))

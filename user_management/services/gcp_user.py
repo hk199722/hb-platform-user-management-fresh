@@ -4,7 +4,7 @@ from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession
 from user_management.repositories.gcp_user import GCPUserRepository
-from user_management.schemas import GCPUserSchema, NewGCPUserSchema
+from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
 from user_management.services.gcp_identity import GCPIdentityPlatformService
 
 
@@ -30,7 +30,7 @@ class GCPUserService:
         """Lists `GCPUser`s data from local database."""
         return self.gcp_user_repository.list()
 
-    def update_gcp_user(self, uid: UUID4, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
+    def update_gcp_user(self, uid: UUID4, gcp_user: UpdateGCPUserSchema) -> GCPUserSchema:
         """Updates `GCPUser` data in database and synchronizes it with GCP Identity Platform."""
         updated_user: GCPUserSchema = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
 

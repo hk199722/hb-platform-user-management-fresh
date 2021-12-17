@@ -106,14 +106,15 @@ def test_create_gcp_user(
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
-    assert response.status_code == expected_status
+    assert response.status_code == expected_status, response.json()
     if response.status_code == status.HTTP_201_CREATED:
         gcp_user_uid = response.json()["uid"]
         gcp_user = test_db_session.get(GCPUser, gcp_user_uid)
         assert gcp_user.name == user_name
         assert gcp_user.email == user_email
         # User phones normalization.
-        assert gcp_user.phone_number == user_phone.replace(" ", "")
+        if gcp_user.phone_number is not None:
+            assert gcp_user.phone_number == user_phone.replace(" ", "")
 
         if role is not None:
             # Role passed, and new role created successfully.
@@ -221,7 +222,7 @@ def test_create_sync_gcp_user_errors(
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
-    assert response.status_code == expected_status
+    assert response.status_code == expected_status, response.json()
 
     gcp_user_uid = response.json().get("context", {}).get("uid")
     assert gcp_user_uid is not None
@@ -270,6 +271,7 @@ def test_get_gcp_user(test_client, sql_factory, user_uid, expected_status):
             "email": gcp_user.email,
             # User phones normalization.
             "phone_number": gcp_user.phone_number.replace(" ", ""),
+            "staff": gcp_user.staff,
             "clients": [
                 {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
             ],
@@ -291,6 +293,7 @@ def test_list_gcp_users(test_client, sql_factory):
             "email": client_user.user.email,
             # User phones normalization.
             "phone_number": client_user.user.phone_number.replace(" ", ""),
+            "staff": client_user.user.staff,
             "clients": [
                 {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
             ],
@@ -298,6 +301,97 @@ def test_list_gcp_users(test_client, sql_factory):
         for client_user in client_users
     ]
     assert response.json() == expected
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "patch_payload", "expected_status"],
+    [
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            {"email": "john.doe@hummingbirdtech.com"},
+            status.HTTP_200_OK,
+            id="Successful user update - email updated",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            {"name": "John Doe"},
+            status.HTTP_200_OK,
+            id="Successful user update - name updated",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            {"phone_number": "+4402081232389"},
+            status.HTTP_200_OK,
+            id="Successful user update - phone number updated",
+        ),
+    ],
+)
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_gcp_user_success(
+    mock_identity_platform,
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_uid,
+    patch_payload,
+    expected_status,
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+
+    response = test_client.patch(f"/api/v1/users/{user_uid}", json=patch_payload)
+    data = response.json()
+
+    assert response.status_code == expected_status, data
+
+    test_db_session.expire_all()
+    modified_user = test_db_session.get(GCPUser, user_uid)
+
+    for key, value in patch_payload.items():
+        # Check response payload.
+        assert data[key] == value
+
+        # Check that user data was effectively updated in DB.
+        assert getattr(modified_user, key) == value
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_gcp_user_role_success(
+    mock_identity_platform, test_client, test_db_session, sql_factory
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    # Client 2, the Client we will update our GCPUser with when we pass a role to it.
+    client_2 = sql_factory.client.create(uid="0a208dde-f68f-4682-b75f-eab67de6a64b")
+    # GCPUser, already belongs to Client 2.
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.client_user.create(client=client_1, user=gcp_user, role=Role.PILOT)
+
+    response = test_client.patch(
+        f"/api/v1/users/{gcp_user.uid}",
+        json={"role": {"client_uid": client_2.uid, "role": Role.NORMAL_USER.value}},
+    )
+    data = response.json()
+
+    assert response.status_code == status.HTTP_200_OK, data
+    assert data == {
+        "name": gcp_user.name,
+        "phone_number": gcp_user.phone_number,
+        "email": gcp_user.email,
+        "staff": gcp_user.staff,
+        "uid": gcp_user.uid,
+        "clients": [{"client_uid": client_2.uid, "role": Role.NORMAL_USER.value}],
+    }
+
+    # Check that user data was effectively updated in DB. We have now 2 roles for our user: one with
+    # the Client 1, which was already present, and another we just added, for Client 2.
+    test_db_session.expire_all()
+    modified_user = test_db_session.get(GCPUser, gcp_user.uid)
+    assert len(modified_user.clients) == 2
+    client_user = test_db_session.scalar(
+        select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=client_1.uid)
+    )
+    assert client_user in modified_user.clients
 
 
 @pytest.mark.parametrize(
@@ -344,16 +438,7 @@ def test_list_gcp_users(test_client, sql_factory):
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
-            None,
-            status.HTTP_200_OK,
-            id="Successful user update",
-        ),
-        pytest.param(
-            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
-            "John Doe",
-            "john.doe@hummingbirdtech.com",
-            "+4402081232389",
-            {"client_uid": "0a208dde-f68f-4682-b75f-eab67de6a64b", "role": Role.NORMAL_USER.value},
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
             status.HTTP_409_CONFLICT,
             id="Wrong user update - role already registered",
         ),
@@ -375,19 +460,10 @@ def test_list_gcp_users(test_client, sql_factory):
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user update - role specified with invalid role",
         ),
-        pytest.param(
-            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
-            "John Doe",
-            "john.doe@hummingbirdtech.com",
-            "+4402081232389",
-            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
-            status.HTTP_200_OK,
-            id="Successful user update - with role specified",
-        ),
     ],
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
-def test_update_gcp_user(
+def test_update_gcp_user_errors(
     mock_identity_platform,
     test_client,
     test_db_session,
@@ -400,12 +476,9 @@ def test_update_gcp_user(
     expected_status,
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
-    # Client 1, the Client we will update our GCPUser with when we pass a role to it.
     client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
-    client_2 = sql_factory.client.create(uid="0a208dde-f68f-4682-b75f-eab67de6a64b")
-    # GCPUser, already belongs to Client 2.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    sql_factory.client_user.create(client=client_2, user=gcp_user)
+    sql_factory.client_user.create(client=client_1, user=gcp_user)
     sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
 
     response = test_client.patch(
@@ -413,33 +486,15 @@ def test_update_gcp_user(
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
-    assert response.status_code == expected_status
-    if response.status_code == status.HTTP_200_OK:
-        # Check response payload.
-        data = response.json()
-        assert data["name"] == user_name
-        assert data["phone_number"] == user_phone
-        assert data["email"] == user_email
+    assert response.status_code == expected_status, response.json()
 
-        # Check that user data was effectively updated in DB.
-        test_db_session.expire_all()
-        modified_user = test_db_session.get(GCPUser, user_uid)
-        assert modified_user.name == user_name
-        assert modified_user.email == user_email
-        assert modified_user.phone_number == user_phone
-
-        if role is not None:
-            assert response.json()["clients"] == [
-                {
-                    "client_uid": "f6787d5d-2577-4663-8de6-88b48c679109",
-                    "role": Role.NORMAL_USER.value,
-                }
-            ]
-
-            client_user = test_db_session.scalar(
-                select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=client_1.uid)
-            )
-            assert client_user in modified_user.clients
+    # Check that user data was NOT updated in DB.
+    test_db_session.expire_all()
+    modified_user = test_db_session.get(GCPUser, user_uid)
+    if modified_user:
+        assert modified_user.name == gcp_user.name
+        assert modified_user.email == gcp_user.email
+        assert modified_user.phone_number == gcp_user.phone_number
 
 
 @pytest.mark.parametrize(
@@ -534,7 +589,7 @@ def test_update_sync_gcp_user_errors(
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
-    assert response.status_code == expected_status
+    assert response.status_code == expected_status, response.json()
 
     gcp_user_uid = response.json().get("context", {}).get("uid")
     assert gcp_user_uid is not None
