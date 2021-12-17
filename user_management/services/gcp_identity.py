@@ -21,13 +21,12 @@ from user_management.core.exceptions import (
     ResourceNotFoundError,
 )
 from user_management.core.firebase import init_identity_platform_app
-from user_management.models import Role
 from user_management.schemas import GCPUserSchema
 
 
 logger = logging.getLogger(__name__)
 
-Claims = TypedDict("Claims", {"roles": Dict[str, Role.value], "staff": bool}, total=False)
+Claims = TypedDict("Claims", {"roles": Dict[str, str], "staff": bool}, total=False)
 
 
 class GCPIdentityPlatformService:

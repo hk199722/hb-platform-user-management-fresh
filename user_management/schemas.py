@@ -9,26 +9,40 @@ from user_management.models import Role
 PHONE_PATTERN = re.compile(r"\+[0-9 ]+")
 
 
-class NamedModel(BaseModel):
-    name: Optional[str]
+def check_empty_string(value: str) -> str:
+    if value == "":
+        raise ValueError("Empty names are not allowed.")
 
-    @validator("name", pre=True, always=True)
-    def empty_string(cls, value):  # pylint: disable=no-self-argument
-        if value == "":
-            raise ValueError("Empty names are not allowed.")
-
-        return value
+    return value
 
 
-class ClientSchema(NamedModel):
+def check_phone_number(value: Optional[str]) -> Optional[str]:
+    if value:
+        if PHONE_PATTERN.match(value) is None:
+            raise ValueError(
+                f"{value} is not a valid phone number. Accepted phone numbers are E.164 "
+                f"compliant (+<area code><phone number>)."
+            )
+
+        return value.replace(" ", "")
+
+    return None
+
+
+class ClientSchema(BaseModel):
+    name: str
     uid: UUID4
+
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
 
     class Config:
         orm_mode = True
 
 
-class NewClientSchema(NamedModel):
-    pass
+class NewClientSchema(BaseModel):
+    name: str
+
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
 
 
 class ClientUserSchema(BaseModel):
@@ -39,38 +53,47 @@ class ClientUserSchema(BaseModel):
         orm_mode = True
 
 
-class BaseUserModel(NamedModel):
+class GCPUserSchema(BaseModel):
+    uid: UUID4
+    name: str
     phone_number: Optional[str] = ""
     email: EmailStr
     staff: bool = False
-
-    @validator("phone_number")
-    def valid_phone_number(cls, value):  # pylint: disable=no-self-argument
-        if value:
-            if PHONE_PATTERN.match(value) is None:
-                raise ValueError(
-                    f"{value} is not a valid phone number. Accepted phone numbers are E.164 "
-                    f"compliant (+<area code><phone number>)."
-                )
-
-            return value.replace(" ", "")
-
-
-class GCPUserSchema(BaseUserModel):
-    uid: UUID4
     clients: List[ClientUserSchema]
+
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
+    _validate_phone = validator("phone_number", pre=True, always=True, allow_reuse=True)(
+        check_phone_number
+    )
 
     class Config:
         orm_mode = True
 
 
-class NewGCPUserSchema(BaseUserModel):
+class NewGCPUserSchema(BaseModel):
+    name: str
+    email: EmailStr
+    phone_number: Optional[str] = ""
+    staff: bool = False
     role: Optional[ClientUserSchema] = None
 
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
+    _validate_phone = validator("phone_number", pre=True, always=True, allow_reuse=True)(
+        check_phone_number
+    )
 
-class UpdateGCPUserSchema(BaseUserModel):
+
+class UpdateGCPUserSchema(BaseModel):
+    name: Optional[str]
     email: Optional[EmailStr]
+    phone_number: Optional[str]
+    staff: Optional[bool]
     role: Optional[ClientUserSchema] = None
+
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
+    _validate_phone = validator("phone_number", pre=True, always=True, allow_reuse=True)(
+        check_phone_number
+    )
 
 
 class ClientFarmSchema(BaseModel):
