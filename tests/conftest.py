@@ -169,6 +169,15 @@ def sql_factory(test_db_session) -> Generator[SQLModelFactory, None, None]:
 def test_user_info() -> Generator[str, None, None]:
     """GCP API Gateway 'X-Apigateway-Api-Userinfo' HTTP header value. To authenticate/authorize user
     in tests requiring API calls.
+
+    Usage:
+
+        def test_auth(test_client, test_user_info):
+            response = test_client.get(
+                "/api/v1/users", headers={"X-Apigateway-Api-Userinfo": test_user_info}
+            )
+            assert response.status_code == 200
+
     """
     timestamp = int(time())
 
