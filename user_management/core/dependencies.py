@@ -17,6 +17,10 @@ DBSession = TypeVar("DBSession", scoped_session, Session)
 
 @dataclasses.dataclass
 class User:
+    """User definition object to be passed to logic from the GCP Identity Platform user info
+    payload.
+    """
+
     uid: UUID4
     staff: Optional[bool]
     roles: Optional[List[Dict[str, str]]]
@@ -32,7 +36,7 @@ def get_database() -> Generator[scoped_session, None, None]:
         db_session.remove()
 
 
-def get_user_info(x_apigateway_api_userinfo: str = Header(None)) -> User:
+def get_user(x_apigateway_api_userinfo: str = Header(None)) -> User:
     """Looks up for a GCP Identity Platform header 'X-Apigateway-Api-Userinfo', where the request
     user information is passed, encoded in Base64, after a successful JWT check which is performed
     in GCP side.
