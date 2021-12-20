@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from pydantic import UUID4
 
-from user_management.core.dependencies import DBSession, get_database, get_user_info
+from user_management.core.dependencies import DBSession, get_database, get_user_info, User
 from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
 from user_management.services.gcp_user import GCPUserService
 
@@ -20,7 +20,7 @@ router = APIRouter()
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=GCPUserSchema)
 def create_gcp_user(
     new_gcp_user: NewGCPUserSchema,
-    user: dict = Depends(get_user_info),
+    user: User = Depends(get_user_info),
     db: DBSession = Depends(get_database),
 ):
     return GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user)
@@ -31,7 +31,7 @@ def create_gcp_user(
 #   - All users if the request user is a HB Staff user.
 @router.get("/{uid}", response_model=GCPUserSchema)
 def get_gcp_user(
-    uid: UUID4, user: dict = Depends(get_user_info), db: DBSession = Depends(get_database)
+    uid: UUID4, user: User = Depends(get_user_info), db: DBSession = Depends(get_database)
 ):
     return GCPUserService(db).get_gcp_user(uid=uid)
 
@@ -40,7 +40,7 @@ def get_gcp_user(
 #   - Only the users that belong to the Clients the request user is a member of.
 #   - All users if the request user is a HB Staff user.
 @router.get("", response_model=List[GCPUserSchema])
-def list_gcp_users(user: dict = Depends(get_user_info), db: DBSession = Depends(get_database)):
+def list_gcp_users(user: User = Depends(get_user_info), db: DBSession = Depends(get_database)):
     return GCPUserService(db).list_gcp_users()
 
 
@@ -51,7 +51,7 @@ def list_gcp_users(user: dict = Depends(get_user_info), db: DBSession = Depends(
 def update_gcp_user(
     uid: UUID4,
     gcp_user: UpdateGCPUserSchema,
-    user: dict = Depends(get_user_info),
+    user: User = Depends(get_user_info),
     db: DBSession = Depends(get_database),
 ):
     return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user)
@@ -62,7 +62,7 @@ def update_gcp_user(
 #   - All users if the request user is a HB Staff user.
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_gcp_user(
-    uid: UUID4, user: dict = Depends(get_user_info), db: DBSession = Depends(get_database)
+    uid: UUID4, user: User = Depends(get_user_info), db: DBSession = Depends(get_database)
 ):
     return GCPUserService(db).delete_gcp_user(uid=uid)
 
@@ -74,7 +74,7 @@ def delete_gcp_user(
 def delete_gcp_user_role(
     uid: UUID4,
     client_uid: UUID4,
-    user: dict = Depends(get_user_info),
+    user: User = Depends(get_user_info),
     db: DBSession = Depends(get_database),
 ):
     return GCPUserService(db).delete_gcp_user_role(uid=uid, client_uid=client_uid)
