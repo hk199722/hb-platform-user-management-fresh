@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, UUID4
 
 from user_management.core.exceptions import ResourceNotFoundError
@@ -12,7 +14,7 @@ class GCPUserRepository(AlchemyRepository):
 
     def _persist_user_role(self, schema: BaseModel, ready_response: GCPUserSchema):
         """Helper method to check up for submitted user roles for a given client."""
-        role: ClientUserSchema = getattr(schema, "role", None)
+        role: Optional[ClientUserSchema] = getattr(schema, "role", None)
         if role is not None:
             # User role passed in. Create role for given Client.
             client_user = ClientUser(
