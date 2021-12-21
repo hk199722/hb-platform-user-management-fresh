@@ -696,7 +696,7 @@ def test_delete_gcp_user(
 ):
     mock_identity_platform().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    client_user = sql_factory.client_user.create(user=gcp_user)
+    client_user = sql_factory.client_user.create(user=gcp_user, client=test_user_info.client_1)
     test_db_session.commit()
 
     response = test_client.delete(

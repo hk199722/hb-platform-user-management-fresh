@@ -43,14 +43,11 @@ def update_gcp_user(
     return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user, user=user)
 
 
-# TODO: Delete only those GCPUsers that the request user can see:
-#   - Only the users that belong to the Clients the request user is a member of.
-#   - All users if the request user is a HB Staff user.
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_gcp_user(
     uid: UUID4, user: User = Depends(get_user), db: DBSession = Depends(get_database)
 ):
-    return GCPUserService(db).delete_gcp_user(uid=uid)
+    return GCPUserService(db).delete_gcp_user(uid=uid, user=user)
 
 
 # TODO: Delete Roles for only those GCPUsers that the request user can see:
