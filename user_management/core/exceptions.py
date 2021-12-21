@@ -50,6 +50,13 @@ class AuthenticationError(AppExceptionCase):
         AppExceptionCase.__init__(self, status_code, context)
 
 
+class AuthorizationError(AppExceptionCase):
+    def __init__(self, context: dict = None):
+        """User is not authorized to access the item."""
+        status_code = status.HTTP_403_FORBIDDEN
+        AppExceptionCase.__init__(self, status_code, context)
+
+
 class ResourceNotFoundError(AppExceptionCase):
     def __init__(self, context: dict = None):
         """The resource requested by the user does not exist."""
