@@ -18,7 +18,7 @@ DBSession = TypeVar("DBSession", scoped_session, Session)
 @dataclasses.dataclass
 class User:
     """User definition object to be passed to logic from the GCP Identity Platform user info
-    payload.
+    payload. It represents the authenticated user who makes the request to the API.
     """
 
     uid: UUID4
