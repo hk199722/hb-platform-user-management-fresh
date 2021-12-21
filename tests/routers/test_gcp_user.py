@@ -286,8 +286,12 @@ def test_get_gcp_user(test_client, test_user_info, sql_factory, user_uid, expect
 
 
 def test_list_gcp_users(test_client, test_user_info, sql_factory):
-    client = sql_factory.client.create()
+    # 3 GCPUsers under the same Client as the request user. Those will be shown in response.
+    client = sql_factory.client.create(uid="30b0e4e8-2ea8-485d-bd27-14ee009a5f43")
     client_users = sql_factory.client_user.create_batch(size=3, client=client)
+    # 3 more GCPUsers in another client the request user does NOT belong to. Those will be hidden.
+    client_2 = sql_factory.client.create()
+    sql_factory.client_user.create_batch(size=3, client=client_2)
 
     response = test_client.get(
         "/api/v1/users", headers={"X-Apigateway-Api-Userinfo": test_user_info}

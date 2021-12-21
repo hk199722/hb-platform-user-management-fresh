@@ -16,6 +16,7 @@ from user_management.core.database import Base
 from user_management.core.dependencies import get_database
 from user_management.core.config.settings import get_settings
 from user_management.main import create_app
+from user_management.models import Role
 from tests.factories import SQLModelFactory
 
 
@@ -181,9 +182,9 @@ def test_user_info() -> Generator[str, None, None]:
     """
     timestamp = int(time())
 
-    # TODO: Add user claims to the next dictionary.
     user_info = {
         "name": "test_user@hummingbirdtech.com",
+        "roles": {"30b0e4e8-2ea8-485d-bd27-14ee009a5f43": Role.NORMAL_USER.value},
         "iss": "https://securetoken.google.com/hbt-staging",
         "aud": "hbt-staging",
         "auth_time": timestamp,
