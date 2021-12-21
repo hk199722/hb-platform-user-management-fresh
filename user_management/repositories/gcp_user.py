@@ -52,7 +52,9 @@ class GCPUserRepository(AlchemyRepository):
         """
         query = select(self.model).join(ClientUser).filter(ClientUser.client_uid.in_(clients))
         results = (
-            self.db.execute(super()._filter_and_order(query=query, order=order_by, **filters))
+            self.db.execute(
+                super()._filter_and_order(query=query, order=order_by, **filters).distinct()
+            )
             .scalars()
             .all()
         )
