@@ -48,7 +48,7 @@ from user_management.models import Client, ClientUser, GCPUser, Role
             "jane.doe@hummingbirdtech.com",
             "",
             {"client_uid": str(uuid.uuid4()), "role": Role.NORMAL_USER.value},
-            status.HTTP_404_NOT_FOUND,
+            status.HTTP_403_FORBIDDEN,
             id="Wrong user update - role specified with invalid client",
         ),
         pytest.param(
@@ -101,6 +101,9 @@ def test_create_gcp_user(
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
+
+    # Add request user to `Client`, so we can assign the role successfully when needed.
+    sql_factory.client_user.create(user=test_user_info.user, client=client)
 
     response = test_client.post(
         "/api/v1/users",
@@ -219,6 +222,7 @@ def test_create_sync_gcp_user_errors(
     mock_identity_platform.side_effect = gcp_ip_error
 
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    sql_factory.client_user.create(client=client, user=test_user_info.user)
 
     response = test_client.post(
         "/api/v1/users",
