@@ -104,7 +104,7 @@ def test_create_gcp_user(
 
     response = test_client.post(
         "/api/v1/users",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
@@ -222,7 +222,7 @@ def test_create_sync_gcp_user_errors(
 
     response = test_client.post(
         "/api/v1/users",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
@@ -261,12 +261,12 @@ def test_create_sync_gcp_user_errors(
     ],
 )
 def test_get_gcp_user(test_client, test_user_info, sql_factory, user_uid, expected_status):
-    client = sql_factory.client.create()
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    client_user = sql_factory.client_user.create(client=client, user=gcp_user)
+    client_user = sql_factory.client_user.create(client=test_user_info.client_1, user=gcp_user)
 
     response = test_client.get(
-        f"/api/v1/users/{user_uid}", headers={"X-Apigateway-Api-Userinfo": test_user_info}
+        f"/api/v1/users/{user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
     )
 
     assert response.status_code == expected_status
@@ -287,18 +287,18 @@ def test_get_gcp_user(test_client, test_user_info, sql_factory, user_uid, expect
 
 def test_list_gcp_users(test_client, test_user_info, sql_factory):
     # 3 GCPUsers under the same Client as the request user. Those will be shown in response.
-    client = sql_factory.client.create(uid="30b0e4e8-2ea8-485d-bd27-14ee009a5f43")
-    client_users = sql_factory.client_user.create_batch(size=3, client=client)
+    client_users = sql_factory.client_user.create_batch(size=3, client=test_user_info.client_1)
     # 3 more GCPUsers in another client the request user does NOT belong to. Those will be hidden.
-    client_2 = sql_factory.client.create()
-    sql_factory.client_user.create_batch(size=3, client=client_2)
+    sql_factory.client_user.create_batch(size=3)
 
     response = test_client.get(
-        "/api/v1/users", headers={"X-Apigateway-Api-Userinfo": test_user_info}
+        "/api/v1/users", headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload}
     )
 
     assert response.status_code == status.HTTP_200_OK
-    expected = [
+
+    # The 3 test users...
+    expected_users = [
         {
             "uid": str(client_user.user.uid),
             "name": client_user.user.name,
@@ -312,7 +312,26 @@ def test_list_gcp_users(test_client, test_user_info, sql_factory):
         }
         for client_user in client_users
     ]
-    assert response.json() == expected
+    # ...and the request user.
+    expected_users.append(
+        {
+            "uid": str(test_user_info.user.uid),
+            "name": test_user_info.user.name,
+            "email": test_user_info.user.email,
+            # User phones normalization.
+            "phone_number": test_user_info.user.phone_number.replace(" ", ""),
+            "staff": test_user_info.user.staff,
+            "clients": [
+                {"client_uid": str(client_user.client.uid), "role": client_user.role.value}
+                for client_user in test_user_info.user.clients
+            ],
+        }
+    )
+    data = response.json()
+
+    assert len(data) == 4
+    for user in expected_users:
+        assert user in data
 
 
 @pytest.mark.parametrize(
@@ -351,10 +370,12 @@ def test_update_gcp_user_success(
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    # Relate the user to be updated with a `Client` in which the request user does have permissions.
+    # sql_factory.client_user.create()
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
         json=patch_payload,
     )
     data = response.json()
@@ -386,7 +407,7 @@ def test_update_gcp_user_role_success(
 
     response = test_client.patch(
         f"/api/v1/users/{gcp_user.uid}",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
         json={"role": {"client_uid": client_2.uid, "role": Role.NORMAL_USER.value}},
     )
     data = response.json()
@@ -502,7 +523,7 @@ def test_update_gcp_user_errors(
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
@@ -602,12 +623,15 @@ def test_update_sync_gcp_user_errors(
 ):
     mock_identity_platform.side_effect = gcp_ip_error
 
+    # Create the `Client` and the `GCPUser` we want to join it.
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    # Make the request user also a member of the `Client`, so he can actually modify the user.
+    sql_factory.client_user.create(client=client, user=test_user_info.user)
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
@@ -661,12 +685,18 @@ def test_delete_gcp_user(
     test_db_session.commit()
 
     response = test_client.delete(
-        f"/api/v1/users/{user_uid}", headers={"X-Apigateway-Api-Userinfo": test_user_info}
+        f"/api/v1/users/{user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
     )
 
     assert response.status_code == expected_status
     if response.status_code == status.HTTP_204_NO_CONTENT:
-        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 0
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(GCPUser).filter_by(uid=gcp_user.uid)
+            )
+            == 0
+        )
         # Check that user Client is still there.
         assert (
             test_db_session.scalar(
@@ -718,13 +748,19 @@ def test_delete_sync_gcp_user_errors(
     test_db_session.commit()
 
     response = test_client.delete(
-        f"/api/v1/users/{user_uid}", headers={"X-Apigateway-Api-Userinfo": test_user_info}
+        f"/api/v1/users/{user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
     )
 
     assert response.status_code == expected_status
     # Check that User and its Client is still there. Users must be first deleted from GCP-IP backend
     # and later from local DB. If any problem occurs in GCP-IP the user must remain in DB as well.
-    assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 1
+    assert (
+        test_db_session.scalar(
+            select(func.count()).select_from(GCPUser).filter_by(uid=gcp_user.uid)
+        )
+        == 1
+    )
     assert (
         test_db_session.scalar(
             select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
@@ -738,7 +774,7 @@ def test_delete_client_user(test_client, test_user_info, test_db_session, sql_fa
 
     response = test_client.delete(
         f"/api/v1/users/{client_user.gcp_user_uid}/roles/{client_user.client_uid}",
-        headers={"X-Apigateway-Api-Userinfo": test_user_info},
+        headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
     )
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
