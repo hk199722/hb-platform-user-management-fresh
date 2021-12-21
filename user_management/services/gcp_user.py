@@ -5,11 +5,13 @@ from pydantic import UUID4
 from user_management.core.dependencies import DBSession, User
 from user_management.repositories.gcp_user import GCPUserRepository
 from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
+from user_management.services.auth import AuthService
 from user_management.services.gcp_identity import GCPIdentityPlatformService
 
 
 class GCPUserService:
     def __init__(self, db: DBSession):
+        self.auth_service = AuthService(db)
         self.gcp_user_repository = GCPUserRepository(db)
         self.gcp_identity_service = GCPIdentityPlatformService()
 
@@ -22,8 +24,9 @@ class GCPUserService:
 
         return created_user
 
-    def get_gcp_user(self, uid: UUID4) -> GCPUserSchema:
+    def get_gcp_user(self, uid: UUID4, user: User) -> GCPUserSchema:
         """Gets `GCPUser`s data from local database."""
+        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
         gcp_user = self.gcp_user_repository.get(pk=uid)
 
         return gcp_user

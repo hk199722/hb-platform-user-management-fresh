@@ -26,12 +26,9 @@ def create_gcp_user(
     return GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user)
 
 
-# TODO: Filter users by only those that the request user can see:
-#   - Only the users that belong to the Clients the request user is a member of.
-#   - All users if the request user is a HB Staff user.
 @router.get("/{uid}", response_model=GCPUserSchema)
 def get_gcp_user(uid: UUID4, user: User = Depends(get_user), db: DBSession = Depends(get_database)):
-    return GCPUserService(db).get_gcp_user(uid=uid)
+    return GCPUserService(db).get_gcp_user(uid=uid, user=user)
 
 
 @router.get("", response_model=List[GCPUserSchema])
