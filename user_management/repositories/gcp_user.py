@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from pydantic import BaseModel, UUID4
 from sqlalchemy import select
@@ -47,6 +47,9 @@ class GCPUserRepository(AlchemyRepository):
         order_by: Order = None,
         **filters,
     ) -> List[Schema]:
+        """Lists `GCPUser`s filtering the results to only those users that belong to the passed list
+        of clients (by `Client.uid`).
+        """
         query = select(self.model).join(ClientUser).filter(ClientUser.client_uid.in_(clients))
         results = (
             self.db.execute(super()._filter_and_order(query=query, order=order_by, **filters))
@@ -65,4 +68,16 @@ class GCPUserRepository(AlchemyRepository):
 
         raise ResourceNotFoundError(
             {"message": f"User {gcp_user} doesn't have a role with Client {client}."}
+        )
+
+    def get_matching_clients(self, gcp_user: UUID4, clients: Iterable[str]):
+        """Given a `GCPUser.uid` and an iterable of `Client.uid`s, it returns the"""
+        return (
+            self.db.execute(
+                select(ClientUser)
+                .filter_by(gcp_user_uid=gcp_user)
+                .filter(ClientUser.client_uid.in_(clients))
+            )
+            .scalars()
+            .all()
         )
