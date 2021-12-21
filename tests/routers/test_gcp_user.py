@@ -369,9 +369,9 @@ def test_update_gcp_user_success(
     expected_status,
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
-    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
     # Relate the user to be updated with a `Client` in which the request user does have permissions.
-    # sql_factory.client_user.create()
+    sql_factory.client_user.create(client=test_user_info.client_1, user=gcp_user)
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
@@ -398,17 +398,17 @@ def test_update_gcp_user_role_success(
     mock_identity_platform, test_client, test_user_info, test_db_session, sql_factory
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
-    client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
-    # Client 2, the Client we will update our GCPUser with when we pass a role to it.
-    client_2 = sql_factory.client.create(uid="0a208dde-f68f-4682-b75f-eab67de6a64b")
     # GCPUser, already belongs to Client 2.
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    sql_factory.client_user.create(client=client_1, user=gcp_user, role=Role.PILOT)
+    sql_factory.client_user.create(client=test_user_info.client_2, user=gcp_user, role=Role.PILOT)
 
+    # Update the user to be a member of `client_1` of the request user.
     response = test_client.patch(
         f"/api/v1/users/{gcp_user.uid}",
         headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
-        json={"role": {"client_uid": client_2.uid, "role": Role.NORMAL_USER.value}},
+        json={
+            "role": {"client_uid": str(test_user_info.client_1.uid), "role": Role.NORMAL_USER.value}
+        },
     )
     data = response.json()
 
@@ -419,7 +419,9 @@ def test_update_gcp_user_role_success(
         "email": gcp_user.email,
         "staff": gcp_user.staff,
         "uid": gcp_user.uid,
-        "clients": [{"client_uid": client_2.uid, "role": Role.NORMAL_USER.value}],
+        "clients": [
+            {"client_uid": str(test_user_info.client_1.uid), "role": Role.NORMAL_USER.value}
+        ],
     }
 
     # Check that user data was effectively updated in DB. We have now 2 roles for our user: one with
@@ -428,7 +430,9 @@ def test_update_gcp_user_role_success(
     modified_user = test_db_session.get(GCPUser, gcp_user.uid)
     assert len(modified_user.clients) == 2
     client_user = test_db_session.scalar(
-        select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=client_1.uid)
+        select(ClientUser).filter_by(
+            gcp_user_uid=gcp_user.uid, client_uid=test_user_info.client_1.uid
+        )
     )
     assert client_user in modified_user.clients
 
@@ -516,9 +520,14 @@ def test_update_gcp_user_errors(
     expected_status,
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
-    client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    # Create Client to join `gcp_user` and request user under a same client. So request user can
+    # actually have permission to perform requests within that client.
+    client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    sql_factory.client_user.create(client=client_1, user=test_user_info.user)
     sql_factory.client_user.create(client=client_1, user=gcp_user)
+    sql_factory.client_user.create(client=test_user_info.client_1, user=gcp_user)
+    # Create a user for the duplicate email error.
     sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
 
     response = test_client.patch(
@@ -625,9 +634,10 @@ def test_update_sync_gcp_user_errors(
 
     # Create the `Client` and the `GCPUser` we want to join it.
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
-    sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.client_user.create(client=test_user_info.client_1, user=user)
     # Make the request user also a member of the `Client`, so he can actually modify the user.
-    sql_factory.client_user.create(client=client, user=test_user_info.user)
+    sql_factory.client_user.create(client=client, user=test_user_info.user, role=Role.SUPERUSER)
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
@@ -641,6 +651,7 @@ def test_update_sync_gcp_user_errors(
     assert gcp_user_uid is not None
 
     # User has been updated anyway in local DB.
+    test_db_session.expire_all()
     gcp_user = test_db_session.get(GCPUser, gcp_user_uid)
     assert gcp_user.name == user_name
     assert gcp_user.email == user_email
