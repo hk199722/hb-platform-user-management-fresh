@@ -785,14 +785,14 @@ def test_delete_sync_gcp_user_errors(
 
 
 def test_delete_client_user(test_client, test_user_info, test_db_session, sql_factory):
-    client_user = sql_factory.client_user.create()
+    client_user = sql_factory.client_user.create(client=test_user_info.client_1)
 
     response = test_client.delete(
-        f"/api/v1/users/{client_user.gcp_user_uid}/roles/{client_user.client_uid}",
+        f"/api/v1/users/{client_user.gcp_user_uid}/roles/{test_user_info.client_1.uid}",
         headers={"X-Apigateway-Api-Userinfo": test_user_info.header_payload},
     )
 
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_204_NO_CONTENT, response.json()
 
     # Check that the object has been effectively deleted from the database.
     assert (

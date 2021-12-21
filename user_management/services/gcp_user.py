@@ -61,8 +61,9 @@ class GCPUserService:
         self.gcp_identity_service.remove_gcp_user(uid=uid)
         self.gcp_user_repository.delete(pk=uid)
 
-    def delete_gcp_user_role(self, uid: UUID4, client_uid: UUID4) -> None:
+    def delete_gcp_user_role(self, uid: UUID4, client_uid: UUID4, user: User) -> None:
         """Deletes `ClientUser` associative object from local database, given a `GCPUser.uid` and a
         `Client.uid`.
         """
+        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
         self.gcp_user_repository.delete_client_user(gcp_user=uid, client=client_uid)

@@ -10,9 +10,6 @@ from user_management.services.gcp_user import GCPUserService
 
 router = APIRouter()
 
-# FIXME: Remove this Pylint control line when filtering by permissions is finished.
-# pylint: disable=unused-argument
-
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=GCPUserSchema)
 def create_gcp_user(
@@ -50,9 +47,6 @@ def delete_gcp_user(
     return GCPUserService(db).delete_gcp_user(uid=uid, user=user)
 
 
-# TODO: Delete Roles for only those GCPUsers that the request user can see:
-#   - Only the users that belong to the Clients the request user is a member of.
-#   - All users if the request user is a HB Staff user.
 @router.delete("/{uid}/roles/{client_uid}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_gcp_user_role(
     uid: UUID4,
@@ -60,4 +54,4 @@ def delete_gcp_user_role(
     user: User = Depends(get_user),
     db: DBSession = Depends(get_database),
 ):
-    return GCPUserService(db).delete_gcp_user_role(uid=uid, client_uid=client_uid)
+    return GCPUserService(db).delete_gcp_user_role(uid=uid, client_uid=client_uid, user=user)
