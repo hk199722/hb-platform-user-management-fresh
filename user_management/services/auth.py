@@ -1,7 +1,7 @@
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
-from user_management.core.exceptions import ResourceNotFoundError
+from user_management.core.exceptions import AuthorizationError, ResourceNotFoundError
 from user_management.repositories.gcp_user import GCPUserRepository
 
 
@@ -16,3 +16,13 @@ class AuthService:
         clients = user.roles.keys()
         if not self.gcp_user_repository.get_matching_clients(gcp_user=gcp_user, clients=clients):
             raise ResourceNotFoundError()
+
+    def check_client_allowance(self, user: User, client: UUID4) -> None:
+        if user.staff:
+            return None
+
+        matching = self.gcp_user_repository.get_matching_clients(
+            gcp_user=user.uid, clients=[str(client)]
+        )
+        if not matching:
+            raise AuthorizationError()

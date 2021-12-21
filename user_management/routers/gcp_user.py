@@ -14,16 +14,13 @@ router = APIRouter()
 # pylint: disable=unused-argument
 
 
-# TODO: Implement assignation of user to a client:
-#   - Only create users that belong to the Clients the request user is a member of.
-#   - Create users for any Client if the request user is a HB Staff user.
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=GCPUserSchema)
 def create_gcp_user(
     new_gcp_user: NewGCPUserSchema,
     user: User = Depends(get_user),
     db: DBSession = Depends(get_database),
 ):
-    return GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user)
+    return GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user, user=user)
 
 
 @router.get("/{uid}", response_model=GCPUserSchema)

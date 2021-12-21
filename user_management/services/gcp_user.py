@@ -15,8 +15,11 @@ class GCPUserService:
         self.gcp_user_repository = GCPUserRepository(db)
         self.gcp_identity_service = GCPIdentityPlatformService()
 
-    def create_gcp_user(self, gcp_user: NewGCPUserSchema) -> GCPUserSchema:
+    def create_gcp_user(self, gcp_user: NewGCPUserSchema, user: User) -> GCPUserSchema:
         """Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform."""
+        if gcp_user.role is not None:
+            self.auth_service.check_client_allowance(user=user, client=gcp_user.role.client_uid)
+
         created_user: GCPUserSchema = self.gcp_user_repository.create(schema=gcp_user)
 
         # Synchronize GCP Identity Platform.
