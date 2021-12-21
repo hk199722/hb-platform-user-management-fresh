@@ -40,8 +40,11 @@ class GCPUserService:
             clients=[client_uid for client_uid in user.roles.keys()]
         )
 
-    def update_gcp_user(self, uid: UUID4, gcp_user: UpdateGCPUserSchema) -> GCPUserSchema:
+    def update_gcp_user(
+        self, uid: UUID4, gcp_user: UpdateGCPUserSchema, user: User
+    ) -> GCPUserSchema:
         """Updates `GCPUser` data in database and synchronizes it with GCP Identity Platform."""
+        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
         updated_user: GCPUserSchema = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
 
         # Synchronize GCP Identity Platform.

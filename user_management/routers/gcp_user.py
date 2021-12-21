@@ -36,9 +36,6 @@ def list_gcp_users(user: User = Depends(get_user), db: DBSession = Depends(get_d
     return GCPUserService(db).list_gcp_users(user=user)
 
 
-# TODO: Update only those GCPUsers that the request user can see:
-#   - Only the users that belong to the Clients the request user is a member of.
-#   - All users if the request user is a HB Staff user.
 @router.patch("/{uid}", response_model=GCPUserSchema)
 def update_gcp_user(
     uid: UUID4,
@@ -46,7 +43,7 @@ def update_gcp_user(
     user: User = Depends(get_user),
     db: DBSession = Depends(get_database),
 ):
-    return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user)
+    return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user, user=user)
 
 
 # TODO: Delete only those GCPUsers that the request user can see:
