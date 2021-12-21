@@ -1,10 +1,11 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, UUID4
+from sqlalchemy import select
 
 from user_management.core.exceptions import ResourceNotFoundError
 from user_management.models import GCPUser, ClientUser
-from user_management.repositories.base import AlchemyRepository, Schema
+from user_management.repositories.base import AlchemyRepository, Order, Schema
 from user_management.schemas import ClientUserSchema, GCPUserSchema
 
 
@@ -39,6 +40,20 @@ class GCPUserRepository(AlchemyRepository):
         response = super().update(pk=pk, schema=schema)
 
         return self._persist_user_role(schema=schema, ready_response=response)
+
+    def list_restricted(
+        self,
+        clients: List[str],
+        order_by: Order = None,
+        **filters,
+    ) -> List[Schema]:
+        query = select(self.model).join(ClientUser).filter(ClientUser.client_uid.in_(clients))
+        results = (
+            self.db.execute(super()._filter_and_order(query=query, order=order_by, **filters))
+            .scalars()
+            .all()
+        )
+        return [self._response(entity) for entity in results]
 
     def delete_client_user(self, gcp_user: UUID4, client: UUID4) -> None:
         """Given a `GCPUser` UUID and a `Client` UUID, it finds the associative object between both

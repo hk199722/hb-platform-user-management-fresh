@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import UUID4
 
-from user_management.core.dependencies import DBSession
+from user_management.core.dependencies import DBSession, User
 from user_management.repositories.gcp_user import GCPUserRepository
 from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
 from user_management.services.gcp_identity import GCPIdentityPlatformService
@@ -24,11 +24,18 @@ class GCPUserService:
 
     def get_gcp_user(self, uid: UUID4) -> GCPUserSchema:
         """Gets `GCPUser`s data from local database."""
-        return self.gcp_user_repository.get(pk=uid)
+        gcp_user = self.gcp_user_repository.get(pk=uid)
 
-    def list_gcp_users(self) -> List[GCPUserSchema]:
+        return gcp_user
+
+    def list_gcp_users(self, user: User) -> List[GCPUserSchema]:
         """Lists `GCPUser`s data from local database."""
-        return self.gcp_user_repository.list()
+        if user.staff is True:
+            return self.gcp_user_repository.list()
+
+        return self.gcp_user_repository.list_restricted(
+            clients=[client_uid for client_uid in user.roles.keys()]
+        )
 
     def update_gcp_user(self, uid: UUID4, gcp_user: UpdateGCPUserSchema) -> GCPUserSchema:
         """Updates `GCPUser` data in database and synchronizes it with GCP Identity Platform."""
