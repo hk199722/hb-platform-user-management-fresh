@@ -18,11 +18,14 @@ class AuthService:
             raise ResourceNotFoundError()
 
     def check_client_allowance(self, user: User, client: UUID4) -> None:
+        """Checks if the given `user` does have permissions to perform changes related to `client`,
+        this is, if it is a `Role.SUPERUSER` within that client.
+        """
         if user.staff:
             return None
 
-        matching = self.gcp_user_repository.get_matching_clients(
-            gcp_user=user.uid, clients=[str(client)]
+        superuser = self.gcp_user_repository.get_superuser_role(
+            gcp_user_uid=user.uid, client_uid=client
         )
-        if not matching:
+        if not superuser:
             raise AuthorizationError()

@@ -4,7 +4,7 @@ from pydantic import BaseModel, UUID4
 from sqlalchemy import select
 
 from user_management.core.exceptions import ResourceNotFoundError
-from user_management.models import GCPUser, ClientUser
+from user_management.models import ClientUser, GCPUser, Role
 from user_management.repositories.base import AlchemyRepository, Order, Schema
 from user_management.schemas import ClientUserSchema, GCPUserSchema
 
@@ -76,12 +76,18 @@ class GCPUserRepository(AlchemyRepository):
         """Given a `GCPUser.uid` and an iterable of `Client.uid`s, it returns a list of `Client.uid`
         the user belongs to, from the given iterable.
         """
-        return (
-            self.db.execute(
-                select(ClientUser.client_uid)
-                .filter_by(gcp_user_uid=gcp_user)
-                .filter(ClientUser.client_uid.in_(clients))
+        return self.db.execute(
+            select([ClientUser.client_uid, ClientUser.role])
+            .filter_by(gcp_user_uid=gcp_user)
+            .filter(ClientUser.client_uid.in_(clients))
+        ).all()
+
+    def get_superuser_role(self, gcp_user_uid: UUID4, client_uid: UUID4):
+        """Returns the `ClientUser` for the given `gcp_user_uid` and `client_uid` if the user is a
+        `Role.SUPERUSER` within that client, or `None` otherwise.
+        """
+        return self.db.execute(
+            select([ClientUser.client_uid, ClientUser.role]).filter_by(
+                gcp_user_uid=gcp_user_uid, client_uid=client_uid, role=Role.SUPERUSER
             )
-            .scalars()
-            .all()
-        )
+        ).all()

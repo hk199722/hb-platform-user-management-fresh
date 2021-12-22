@@ -17,6 +17,7 @@ from user_management.core.database import Base
 from user_management.core.dependencies import get_database
 from user_management.core.config.settings import get_settings
 from user_management.main import create_app
+from user_management.models import Role
 from tests.factories import SQLModelFactory
 
 
@@ -187,7 +188,8 @@ def test_user_info(sql_factory) -> Generator[RequestUser, None, None]:
     convenience.
     """
     gcp_user = sql_factory.gcp_user.create(name="Request User")
-    client_user_1, client_user_2 = sql_factory.client_user.create_batch(size=2, user=gcp_user)
+    client_user_1 = sql_factory.client_user.create(user=gcp_user, role=Role.SUPERUSER)
+    client_user_2 = sql_factory.client_user.create(user=gcp_user, role=Role.NORMAL_USER)
     timestamp = int(time())
 
     user_info = {
