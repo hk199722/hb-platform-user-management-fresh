@@ -3,7 +3,7 @@ from typing import Iterable, List, Optional
 from pydantic import BaseModel, UUID4
 from sqlalchemy import select
 
-from user_management.core.exceptions import ResourceNotFoundError
+from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
 from user_management.models import ClientUser, GCPUser, Role
 from user_management.repositories.base import AlchemyRepository, Order, Schema
 from user_management.schemas import ClientUserSchema, GCPUserSchema
@@ -15,18 +15,40 @@ class GCPUserRepository(AlchemyRepository):
 
     def _persist_user_role(self, schema: BaseModel, ready_response: GCPUserSchema):
         """Helper method to check up for submitted user roles for a given client."""
-        role: Optional[ClientUserSchema] = getattr(schema, "role", None)
-        if role is not None:
-            # User role passed in. Create role for given Client.
-            client_user = ClientUser(
-                client_uid=role.client_uid,
-                gcp_user_uid=ready_response.uid,
-                role=role.role,
+        client_user: Optional[ClientUserSchema] = getattr(schema, "role", None)
+        if client_user is not None:
+            # User role passed in.
+            existing_client_user = self.db.get(
+                ClientUser,
+                {"client_uid": client_user.client_uid, "gcp_user_uid": ready_response.uid},
             )
-            self.db.add(client_user)
-            self._persist_changes(schema=schema)
-            ready_response.clients = [client_user]
 
+            if existing_client_user:
+                # User already has a role in the given Client.
+                if existing_client_user.role == client_user.role:
+                    # The user already has this role in the given Client.
+                    raise ResourceConflictError(
+                        context={
+                            "message": f"User {existing_client_user.gcp_user_uid} is already a "
+                            f"{existing_client_user.role.value} in client "
+                            f"{existing_client_user.client_uid}"
+                        }
+                    )
+
+                # Role has changed.
+                existing_client_user.role = client_user.role
+                ready_response.clients = [existing_client_user]
+            else:
+                # Create new role for given Client.
+                new_client_user = ClientUser(
+                    client_uid=client_user.client_uid,
+                    gcp_user_uid=ready_response.uid,
+                    role=client_user.role,
+                )
+                self.db.add(new_client_user)
+                ready_response.clients = [new_client_user]
+
+        self._persist_changes(schema=schema)
         return ready_response
 
     def create(self, schema: BaseModel) -> Schema:

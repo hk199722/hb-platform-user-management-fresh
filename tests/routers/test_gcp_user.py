@@ -523,7 +523,7 @@ def test_update_gcp_user_errors(
     # actually have permission to perform requests within that client.
     client_1 = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.client_user.create(client=client_1, user=user_info.user)
-    sql_factory.client_user.create(client=client_1, user=gcp_user)
+    sql_factory.client_user.create(client=client_1, user=gcp_user, role=Role.NORMAL_USER)
     sql_factory.client_user.create(client=user_info.client_1, user=gcp_user)
     # Create a user for the duplicate email error.
     sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
