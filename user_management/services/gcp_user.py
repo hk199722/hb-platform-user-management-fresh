@@ -18,7 +18,9 @@ class GCPUserService:
     def create_gcp_user(self, gcp_user: NewGCPUserSchema, user: User) -> GCPUserSchema:
         """Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform."""
         if gcp_user.role is not None:
-            self.auth_service.check_client_allowance(user=user, client=gcp_user.role.client_uid)
+            self.auth_service.check_client_allowance(
+                request_user=user, client=gcp_user.role.client_uid
+            )
 
         created_user: GCPUserSchema = self.gcp_user_repository.create(schema=gcp_user)
 
@@ -29,7 +31,7 @@ class GCPUserService:
 
     def get_gcp_user(self, uid: UUID4, user: User) -> GCPUserSchema:
         """Gets `GCPUser`s data from local database."""
-        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
+        self.auth_service.check_gcp_user_view_allowance(request_user=user, uid=uid)
         gcp_user = self.gcp_user_repository.get(pk=uid)
 
         return gcp_user
@@ -47,7 +49,7 @@ class GCPUserService:
         self, uid: UUID4, gcp_user: UpdateGCPUserSchema, user: User
     ) -> GCPUserSchema:
         """Updates `GCPUser` data in database and synchronizes it with GCP Identity Platform."""
-        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
+        self.auth_service.check_gcp_user_edit_allowance(request_user=user, uid=uid, schema=gcp_user)
         updated_user: GCPUserSchema = self.gcp_user_repository.update(pk=uid, schema=gcp_user)
 
         # Synchronize GCP Identity Platform.
@@ -57,7 +59,7 @@ class GCPUserService:
 
     def delete_gcp_user(self, uid: UUID4, user: User) -> None:
         """Deletes `GCPUser` from local database, and also from GCP Identity Platform."""
-        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
+        self.auth_service.check_gcp_user_edit_allowance(request_user=user, uid=uid)
         self.gcp_identity_service.remove_gcp_user(uid=uid)
         self.gcp_user_repository.delete(pk=uid)
 
@@ -65,5 +67,5 @@ class GCPUserService:
         """Deletes `ClientUser` associative object from local database, given a `GCPUser.uid` and a
         `Client.uid`.
         """
-        self.auth_service.check_gcp_user_allowance(user=user, gcp_user=uid)
+        self.auth_service.check_gcp_user_edit_allowance(request_user=user, uid=uid)
         self.gcp_user_repository.delete_client_user(gcp_user=uid, client=client_uid)

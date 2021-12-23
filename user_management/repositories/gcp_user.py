@@ -94,13 +94,13 @@ class GCPUserRepository(AlchemyRepository):
             {"message": f"User {gcp_user} doesn't have a role with Client {client}."}
         )
 
-    def get_matching_clients(self, gcp_user: UUID4, clients: Iterable[str]) -> List[UUID4]:
+    def get_matching_clients(self, gcp_user_uid: UUID4, clients: Iterable[str]) -> List[UUID4]:
         """Given a `GCPUser.uid` and an iterable of `Client.uid`s, it returns a list of `Client.uid`
         the user belongs to, from the given iterable.
         """
         return self.db.execute(
             select([ClientUser.client_uid, ClientUser.role])
-            .filter_by(gcp_user_uid=gcp_user)
+            .filter_by(gcp_user_uid=gcp_user_uid)
             .filter(ClientUser.client_uid.in_(clients))
         ).all()
 
