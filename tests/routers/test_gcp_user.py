@@ -428,7 +428,6 @@ def test_update_gcp_user_role_success(
     # the Client 1, which was already present, and another we just added, for Client 2.
     test_db_session.expire_all()
     modified_user = test_db_session.get(GCPUser, gcp_user.uid)
-    assert len(modified_user.clients) == 2
     client_user = test_db_session.scalar(
         select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=user_info.client_1.uid)
     )
