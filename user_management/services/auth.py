@@ -13,6 +13,10 @@ class AuthService:
     def __init__(self, db: DBSession):
         self.gcp_user_repository = GCPUserRepository(db)
 
+    def check_staff_permission(self, request_user: User) -> None:
+        if not request_user.staff:
+            raise AuthorizationError()
+
     def check_gcp_user_view_allowance(self, request_user: User, uid: UUID4) -> None:
         """Checks if the given `request_user` does have permissions to view a certain `GCPUser`."""
         if request_user.staff or request_user.uid == uid:

@@ -7,7 +7,7 @@ from user_management.models import GCPUser, Role
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
-def test_create_gcp_user_successful(mock_gcp_ip, test_client, user_info, test_db_session):
+def test_create_gcp_user_success(mock_gcp_ip, test_client, user_info, test_db_session):
     """Users with a `SUPERUSER` role in a Client can create new users within that client."""
     mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
 
@@ -59,6 +59,32 @@ def test_create_gcp_user_staff(
     assert data["clients"] == [{"client_uid": str(client.uid), "role": Role.NORMAL_USER.value}]
 
 
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_create_gcp_user_staff_no_client(
+    mock_gcp_ip, test_client, staff_user_info, test_db_session
+):
+    """HB Staff users can create users with no Clients related."""
+    mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+
+    response = test_client.post(
+        "/api/v1/users",
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+        json={
+            "name": "John Doe",
+            "email": "john.doe@hummingbirdtech.com",
+            "phone_number": "+34658071353",
+            # No `role` submitted at all.
+        },
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED, response.json()
+
+    data = response.json()
+    new_gcp_user = test_db_session.scalar(select(GCPUser).filter_by(uid=data["uid"]))
+    assert new_gcp_user is not None
+    assert data["clients"] == []
+
+
 def test_create_gcp_user_unauthorized_client(test_client, user_info, sql_factory):
     """Normal users can't create users under Clients they are not members of."""
     client = sql_factory.client.create()
@@ -93,8 +119,8 @@ def test_create_gcp_user_unauthorized_role(test_client, user_info):
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
 
 
-def test_get_gcp_user_successful(test_client, user_info, sql_factory):
-    """Users can access other users data if they are members of the same Client."""
+def test_get_gcp_user_success(test_client, user_info, sql_factory):
+    """Users can access other user data if they are members of the same Client."""
     client_user = sql_factory.client_user.create(client=user_info.client_2)
 
     response = test_client.get(
@@ -148,9 +174,7 @@ def test_get_gcp_user_unauthorized(test_client, user_info, sql_factory):
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
-def test_update_gcp_user_successful(
-    mock_gcp_ip, test_client, user_info, test_db_session, sql_factory
-):
+def test_update_gcp_user_success(mock_gcp_ip, test_client, user_info, test_db_session, sql_factory):
     """Users can update other users if they are `SUPERUSER` role in the same Client."""
     mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     client_user = sql_factory.client_user.create(client=user_info.client_1, role=Role.NORMAL_USER)
