@@ -55,7 +55,7 @@ from user_management.models import Client, ClientUser, GCPUser, Role
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "",
-            {"client_uid": str(uuid.uuid4()), "role": "INVALID_ROLE"},
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": "INVALID_ROLE"},
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user update - role specified with invalid role",
         ),

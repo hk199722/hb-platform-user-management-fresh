@@ -279,3 +279,71 @@ def test_update_gcp_user_unauthorized_role(test_client, user_info, sql_factory, 
     gcp_user = test_db_session.get(GCPUser, client_user.gcp_user_uid)
     assert gcp_user.name != patch_payload["name"]
     assert gcp_user.email != patch_payload["email"]
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_delete_gcp_user_success(mock_gcp_ip, test_client, user_info, sql_factory, test_db_session):
+    """Users can delete other users if they are `SUPERUSER` role in the same Client."""
+    mock_gcp_ip().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    client_user = sql_factory.client_user.create(client=user_info.client_1)
+
+    response = test_client.delete(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT, response.json()
+    assert test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid)) is None
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_delete_gcp_user_staff(
+    mock_gcp_ip, test_client, staff_user_info, sql_factory, test_db_session
+):
+    """HB Staff users can delete any user in the platform."""
+    mock_gcp_ip().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    client_user = sql_factory.client_user.create()
+
+    response = test_client.delete(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT, response.json()
+    assert test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid)) is None
+
+
+def test_delete_gcp_user_unauthorized_client(test_client, user_info, sql_factory, test_db_session):
+    """A user can't delete another user if it's not a member of the same Client."""
+    client_user = sql_factory.client_user.create()
+
+    response = test_client.delete(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+    assert (
+        test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
+        == client_user.user
+    )
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_delete_gcp_user_unauthorized_role(
+    mock_gcp_ip, test_client, user_info, sql_factory, test_db_session
+):
+    """A user who is not a `SUPERUSER` can't delete another user, even in the same Client."""
+    mock_gcp_ip().remove_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    client_user = sql_factory.client_user.create(client=user_info.client_2)
+
+    response = test_client.delete(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+    assert (
+        test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
+        == client_user.user
+    )
