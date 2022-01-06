@@ -752,7 +752,7 @@ def test_delete_sync_gcp_user_errors(
 ):
     mock_identity_platform.side_effect = gcp_ip_error
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
-    user_client = sql_factory.client_user.create(user=gcp_user)
+    user_client = sql_factory.client_user.create(user=gcp_user, client=user_info.client_1)
     test_db_session.commit()
 
     response = test_client.delete(
