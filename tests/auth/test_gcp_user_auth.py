@@ -347,3 +347,93 @@ def test_delete_gcp_user_unauthorized_role(
         test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
         == client_user.user
     )
+
+
+# pylint: disable=unused-argument
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_role_success(mock_gcp_ip, test_client, user_info, sql_factory, test_db_session):
+    """Users can update the role of other users if they are `SUPERUSER` role in the same Client."""
+    client_user = sql_factory.client_user.create(client=user_info.client_1, role=Role.NORMAL_USER)
+
+    response = test_client.patch(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"role": {"client_uid": str(user_info.client_1.uid), "role": Role.PILOT.value}},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+    assert response.json()["clients"] == [
+        {"client_uid": str(user_info.client_1.uid), "role": Role.PILOT.value}
+    ]
+
+    test_db_session.expire_all()
+    gcp_user = test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
+    assert len(gcp_user.clients) == 1
+    assert gcp_user.clients[0].role == Role.PILOT
+
+
+# pylint: disable=unused-argument
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_role_staff(mock_gcp_ip, test_client, staff_user_info, sql_factory, test_db_session):
+    """HB Staff users can change the roles of any user in the platform."""
+    client_user = sql_factory.client_user.create(role=Role.PILOT)
+
+    response = test_client.patch(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+        json={"role": {"client_uid": str(client_user.client_uid), "role": Role.NORMAL_USER.value}},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+    assert response.json()["clients"] == [
+        {"client_uid": str(client_user.client_uid), "role": Role.NORMAL_USER.value}
+    ]
+
+    test_db_session.expire_all()
+    gcp_user = test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
+    assert len(gcp_user.clients) == 1
+    assigned_client = gcp_user.clients[0]
+    assert assigned_client.client_uid == client_user.client_uid
+    assert assigned_client.role == Role.NORMAL_USER
+
+
+def test_update_role_unauthorized_role(test_client, user_info, sql_factory, test_db_session):
+    """A user who is not a `SUPERUSER` can't update another user's role, even in the same Client."""
+    client_user = sql_factory.client_user.create(client=user_info.client_2, role=Role.PILOT)
+
+    response = test_client.patch(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"role": {"client_uid": str(user_info.client_2.uid), "role": Role.NORMAL_USER.value}},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
+
+    test_db_session.expire_all()
+    gcp_user = test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
+    assert len(gcp_user.clients) == 1
+    assigned_client = gcp_user.clients[0]
+    assert assigned_client.client_uid == client_user.client_uid
+    assert assigned_client.role == client_user.role
+
+
+def test_update_role_unauthorized_client(test_client, user_info, sql_factory, test_db_session):
+    """A user can't delete another user if it's not a member of the same Client."""
+    client_user = sql_factory.client_user.create(role=Role.PILOT)
+
+    response = test_client.patch(
+        f"/api/v1/users/{client_user.gcp_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"role": {"client_uid": str(client_user.client_uid), "role": Role.NORMAL_USER.value}},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
+
+    test_db_session.expire_all()
+    gcp_user = test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
+    assert len(gcp_user.clients) == 1
+    assigned_client = gcp_user.clients[0]
+    assert assigned_client.client_uid == client_user.client_uid
+    assert assigned_client.role == client_user.role
