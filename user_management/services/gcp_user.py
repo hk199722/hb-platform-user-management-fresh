@@ -17,12 +17,12 @@ class GCPUserService:
 
     def create_gcp_user(self, gcp_user: NewGCPUserSchema, user: User) -> GCPUserSchema:
         """Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform."""
-        if gcp_user.role is not None:
+        if not gcp_user.role:
+            self.auth_service.check_staff_permission(request_user=user)
+        else:
             self.auth_service.check_client_allowance(
                 request_user=user, client=gcp_user.role.client_uid
             )
-        else:
-            self.auth_service.check_staff_permission(request_user=user)
 
         created_user: GCPUserSchema = self.gcp_user_repository.create(schema=gcp_user)
 
