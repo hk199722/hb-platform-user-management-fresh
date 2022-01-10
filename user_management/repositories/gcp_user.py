@@ -1,7 +1,7 @@
 from typing import Iterable, List, Optional
 
 from pydantic import BaseModel, UUID4
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
 from user_management.models import ClientUser, GCPUser, Role
@@ -104,12 +104,12 @@ class GCPUserRepository(AlchemyRepository):
             .filter(ClientUser.client_uid.in_(clients))
         ).all()
 
-    def get_superuser_role(self, gcp_user_uid: UUID4, client_uid: UUID4):
-        """Returns the `ClientUser` for the given `gcp_user_uid` and `client_uid` if the user is a
-        `Role.SUPERUSER` within that client, or `None` otherwise.
-        """
-        return self.db.execute(
-            select([ClientUser.client_uid, ClientUser.role]).filter_by(
-                gcp_user_uid=gcp_user_uid, client_uid=client_uid, role=Role.SUPERUSER
-            )
-        ).all()
+    def get_superuser_role(self, gcp_user_uid: UUID4, client_uid: UUID4) -> bool:
+        """Finds if the given `gcp_user_uid` is a `Role.SUPERUSER` within `client_uid`."""
+        return bool(
+            self.db.execute(
+                select(func.count())
+                .select_from(ClientUser)
+                .filter_by(gcp_user_uid=gcp_user_uid, client_uid=client_uid, role=Role.SUPERUSER)
+            ).scalar()
+        )
