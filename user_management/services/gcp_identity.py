@@ -80,27 +80,18 @@ class GCPIdentityPlatformService:
         except Exception as error:  # pylint: disable=broad-except
             self._handle_gcp_exception(error, gcp_user)
 
-        # Update user claims, if needed.
-        claims: Claims = {}
-
-        if gcp_user.clients:
-            claims.update(
-                {
-                    "roles": {
-                        str(client_user.client_uid): client_user.role.value
-                        for client_user in gcp_user.clients
-                    }
-                }
-            )
-
-        if gcp_user.staff is True:
-            claims.update({"staff": True})
-
-        if claims:
-            try:
-                set_custom_user_claims(str(gcp_user.uid), claims)
-            except Exception as error:  # pylint: disable=broad-except
-                self._handle_gcp_exception(error, gcp_user)
+        # Synchronize user claims.
+        claims: Claims = {
+            "staff": gcp_user.staff,
+            "roles": {
+                str(client_user.client_uid): client_user.role.value
+                for client_user in gcp_user.clients
+            },
+        }
+        try:
+            set_custom_user_claims(str(gcp_user.uid), claims)
+        except Exception as error:  # pylint: disable=broad-except
+            self._handle_gcp_exception(error, gcp_user)
 
     def remove_gcp_user(self, uid: UUID4) -> None:
         try:

@@ -2,7 +2,7 @@ import base64
 import binascii
 import dataclasses
 import json
-from typing import Dict, Generator, Optional, TypeVar
+from typing import Dict, Generator, TypeVar
 
 from fastapi import Header
 from pydantic import UUID4
@@ -22,7 +22,7 @@ class User:
     """
 
     uid: UUID4
-    staff: Optional[bool]
+    staff: bool
     roles: Dict[str, str]
 
 
@@ -48,7 +48,7 @@ def get_user(x_apigateway_api_userinfo: str = Header(None)) -> User:
         user_info = json.loads(base64.b64decode(x_apigateway_api_userinfo))
         return User(
             uid=user_info["uid"],
-            staff=user_info.get("staff", False),
+            staff=user_info["staff"],
             roles=user_info.get("roles", {}),
         )
     except (binascii.Error, json.JSONDecodeError, KeyError, UnicodeDecodeError) as error:

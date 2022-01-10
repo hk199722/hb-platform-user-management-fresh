@@ -194,6 +194,7 @@ def user_info(sql_factory) -> Generator[RequestUser, None, None]:
 
     gcp_user_info = {
         "name": gcp_user.name,
+        "staff": gcp_user.staff,
         "roles": {
             str(client_user_1.client_uid): client_user_1.role.value,
             str(client_user_2.client_uid): client_user_2.role.value,
