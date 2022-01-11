@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     database_pool_recycle: int = 3600
 
     # CORS middleware
-    cors_allow_origin: Optional[Pattern]
+    cors_allow_origins: Optional[Pattern]
 
     # GCP Identity Platform
     gcp_credentials: Optional[SecretStr]

@@ -31,10 +31,10 @@ def create_app() -> FastAPI:
     # Initialize FastAPI app.
     app = FastAPI(title="Users Management")
 
-    if settings.cors_allow_origin:
+    if settings.cors_allow_origins:
         app.add_middleware(
             CORSMiddleware,
-            allow_origin_regex=settings.cors_allow_origin,
+            allow_origin_regex=settings.cors_allow_origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
