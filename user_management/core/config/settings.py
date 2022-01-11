@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     database_pool_recycle: int = 3600
 
     # CORS middleware
-    cors_allow_origin: Optional[Pattern]
+    cors_allow_origin: Pattern = r"https?:\\/\\/(localhost(:\\d*)?|(.*\\.hummingbirdtech\\.com))"
 
     # GCP Identity Platform
     gcp_credentials: Optional[SecretStr]
