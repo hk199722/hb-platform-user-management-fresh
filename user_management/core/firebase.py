@@ -14,17 +14,22 @@ logger = logging.getLogger(__name__)
 
 @cache
 def init_identity_platform_app() -> Optional[App]:
-    """Cached function to initialize GCP Identity Platform / Firebase app."""
-    settings = get_settings()
-    if not settings.gcp_credentials:
-        logger.warning("GCP Identity Platform NOT connected: GCP credentials not configured.")
-        return None
+    """
+    Cached function to initialize GCP Identity Platform / Firebase app.
 
-    try:
-        gcp_credentials = Certificate(json.loads(settings.gcp_credentials.get_secret_value()))
-    except Exception:  # pylint: disable=broad-except
-        logger.exception("GCP Identity Platform NOT connected: invalid GCP credentials.")
-        return None
+    If an environment variable `GCP_CREDENTIALS` is set, the app will be initialized using those
+    credentials. Otherwise, it will use Google Application Default Credentials as per the Firebase
+    SDK implementation.
+    """
+    settings = get_settings()
+    gcp_credentials = None
+
+    if settings.gcp_credentials:
+        try:
+            gcp_credentials = Certificate(json.loads(settings.gcp_credentials.get_secret_value()))
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("GCP Identity Platform NOT connected: invalid GCP credentials.")
+            return None
 
     try:
         app = initialize_app(
