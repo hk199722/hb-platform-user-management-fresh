@@ -18,16 +18,18 @@ In case you need to specify local development project settings, you can create a
 root of the project specifying them as environment variables. Core project settings you might need
 to set up for running the service in local are:
 
+- `DEBUG`: A boolean flag will lower all Python loggers level to `DEBUG` if set to `true`.
 - `DATABASE_URL`: The URI of your local database, e.g. `postgresql://user:password@localhost:5432/user_management`.
 - `GCP_CREDENTIALS`: The credentials of a [GCP Service Account](https://cloud.google.com/iam/docs/service-accounts)
   with permissions to operate with GCP Identity Platform.
 
-:warning: **Warning:** setting `GCP_CREDENTIALS` configuration value will make your local service
-synchronize your local development data with the GCP project the Service Account is assigned to.
-Otherwise your data will remain in your local PostgreSQL database. Most probably you don't need this
-setting, unless you are actually developing or testing the synchronization with GCP IP backend.
-
-There is also a `DEBUG` setting that will lower the Python loggers level to `DEBUG` if set to `true`.
+:warning: **Warning:** setting `GCP_CREDENTIALS` configuration value to a real Service Account will
+make your local service synchronize your local development data with the GCP project the Service
+Account is assigned to. Otherwise your data will remain in your local PostgreSQL database. Most
+probably you don't need this setting, unless you are actually developing or testing the
+synchronization with GCP IP backend. Also, take into account that **not** setting the value will
+make the app pick up the System Default Google Credentials, which if you have them set up it might
+show some errors due to a lack of permissions to operate with GCP-IP.
 
 ### Docker setup
 

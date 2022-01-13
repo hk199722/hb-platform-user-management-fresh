@@ -13,7 +13,7 @@ from firebase_admin.auth import (
     update_user,
     UserNotFoundError,
 )
-from firebase_admin.exceptions import InvalidArgumentError
+from firebase_admin.exceptions import InvalidArgumentError, PermissionDeniedError
 from user_management.core.exceptions import (
     RemoteServiceError,
     RequestError,
@@ -43,6 +43,7 @@ class GCPIdentityPlatformService:
             PhoneNumberAlreadyExistsError: (ResourceConflictError, "Duplicated phone number."),
             UidAlreadyExistsError: (ResourceConflictError, "Duplicated UID."),
             UserNotFoundError: (ResourceNotFoundError, "User not found."),
+            PermissionDeniedError: (RemoteServiceError, str(error)),
             ValueError: (RequestError, str(error)),
             # Handle any unexpected exception form GCP-IP.
             Exception: (RemoteServiceError, str(error)),
