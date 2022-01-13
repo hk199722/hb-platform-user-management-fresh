@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database
@@ -29,6 +29,6 @@ def list_client_farms(db: DBSession = Depends(get_database)):
     return ClientFarmService(db).list_client_farms()
 
 
-@router.delete("/{farm_uid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{farm_uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_client_farm(farm_uid: UUID4, db: DBSession = Depends(get_database)):
     return ClientFarmService(db).delete_client_farm(farm_uid=farm_uid)
