@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database
@@ -31,6 +31,6 @@ def update_client(uid: UUID4, client: NewClientSchema, db: DBSession = Depends(g
     return ClientService(db).update_client(uid=uid, client=client)
 
 
-@router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_client(uid: UUID4, db: DBSession = Depends(get_database)):
     return ClientService(db).delete_client(uid=uid)
