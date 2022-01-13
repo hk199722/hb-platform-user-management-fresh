@@ -4,6 +4,10 @@ Hummingbird Platform users management service.
 
 [![CircleCI](https://circleci.com/gh/HummingbirdTechGroup/hb-platform-user-management/tree/main.svg?style=svg&circle-token=1c1a45ecbfbbbeea388ea05f0df8df0fe3fdd87c)](https://circleci.com/gh/HummingbirdTechGroup/hb-platform-user-management/tree/main)
 
+## Documentation
+
+This project detailed documentation can be read in [Notion](https://www.notion.so/hummingbirdtech/User-Management-ea75ad9a16a5464c8cee4da322786bd5).
+
 
 ## Development
 
