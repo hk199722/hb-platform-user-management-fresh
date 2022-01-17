@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database, get_user, User
@@ -47,7 +47,9 @@ def delete_gcp_user(
     return GCPUserService(db).delete_gcp_user(uid=uid, user=user)
 
 
-@router.delete("/{uid}/roles/{client_uid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{uid}/roles/{client_uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
+)
 def delete_gcp_user_role(
     uid: UUID4,
     client_uid: UUID4,
