@@ -18,10 +18,16 @@ from user_management.models import Client, GCPUser, ClientUser
         pytest.param("New Client", status.HTTP_201_CREATED, id="Successful client creation"),
     ],
 )
-def test_create_client(test_client, test_db_session, sql_factory, client_name, expected_status):
+def test_create_client(
+    test_client, user_info, test_db_session, sql_factory, client_name, expected_status
+):
     sql_factory.client.create(name="VASS Logic Ltd.")
 
-    response = test_client.post("/api/v1/clients", json={"name": client_name})
+    response = test_client.post(
+        "/api/v1/clients",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"name": client_name},
+    )
 
     assert response.status_code == expected_status
     if response.status_code == status.HTTP_201_CREATED:
@@ -45,10 +51,13 @@ def test_create_client(test_client, test_db_session, sql_factory, client_name, e
         ),
     ],
 )
-def test_get_client(test_client, sql_factory, client_uid, expected_status):
+def test_get_client(test_client, user_info, sql_factory, client_uid, expected_status):
     client = sql_factory.client.create(uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
 
-    response = test_client.get(f"/api/v1/clients/{client_uid}")
+    response = test_client.get(
+        f"/api/v1/clients/{client_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
 
     assert response.status_code == expected_status
     if response.status_code == status.HTTP_200_OK:
@@ -56,10 +65,12 @@ def test_get_client(test_client, sql_factory, client_uid, expected_status):
         assert response.json() == expected
 
 
-def test_list_clients(test_client, sql_factory):
+def test_list_clients(test_client, user_info, sql_factory):
     clients = sql_factory.client.create_batch(size=3)
 
-    response = test_client.get("/api/v1/clients")
+    response = test_client.get(
+        "/api/v1/clients", headers={"X-Apigateway-Api-Userinfo": user_info.header_payload}
+    )
 
     assert response.status_code == status.HTTP_200_OK
     expected = [{"name": client.name, "uid": str(client.uid)} for client in clients]
@@ -81,7 +92,9 @@ def test_list_clients(test_client, sql_factory):
         ),
     ],
 )
-def test_delete_client(test_client, test_db_session, sql_factory, client_uid, expected_status):
+def test_delete_client(
+    test_client, user_info, test_db_session, sql_factory, client_uid, expected_status
+):
     # Create a Client and assign 3 GCPUsers.
     client = sql_factory.client.create(uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
     sql_factory.client_user.create_batch(size=3, client=client)
@@ -91,7 +104,10 @@ def test_delete_client(test_client, test_db_session, sql_factory, client_uid, ex
     sql_factory.client_user.create(client=client, user=client_user.user)  # Initial Client.
     test_db_session.commit()
 
-    response = test_client.delete(f"/api/v1/clients/{client_uid}")
+    response = test_client.delete(
+        f"/api/v1/clients/{client_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
 
     assert response.status_code == expected_status
     if expected_status == status.HTTP_204_NO_CONTENT:
@@ -149,12 +165,16 @@ def test_delete_client(test_client, test_db_session, sql_factory, client_uid, ex
     ],
 )
 def test_update_client(
-    test_client, test_db_session, sql_factory, client_uid, new_name, expected_status
+    test_client, user_info, test_db_session, sql_factory, client_uid, new_name, expected_status
 ):
     sql_factory.client.create(name="AgroCorp", uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
     sql_factory.client.create(name="Fields Ltd.")
 
-    response = test_client.patch(f"/api/v1/clients/{client_uid}", json={"name": new_name})
+    response = test_client.patch(
+        f"/api/v1/clients/{client_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"name": new_name},
+    )
 
     assert response.status_code == expected_status
     if expected_status == status.HTTP_200_OK:
