@@ -21,13 +21,13 @@ from user_management.models import Client, GCPUser, ClientUser
     ],
 )
 def test_create_client(
-    test_client, user_info, test_db_session, sql_factory, client_name, expected_status
+    test_client, staff_user_info, test_db_session, sql_factory, client_name, expected_status
 ):
     sql_factory.client.create(name="VASS Logic Ltd.")
 
     response = test_client.post(
         "/api/v1/clients",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
         json={"name": client_name},
     )
 
@@ -38,33 +38,25 @@ def test_create_client(
         assert client.name == client_name
 
 
-@pytest.mark.parametrize(
-    ["client_uid", "expected_status"],
-    [
-        pytest.param(
-            "ac2ef360-0002-4a8b-bf9b-84b7cf779960",
-            status.HTTP_200_OK,
-            id="Successful client retrieval",
-        ),
-        pytest.param(
-            "e72957e6-df6e-476b-af93-a1ae4610e72b",
-            status.HTTP_404_NOT_FOUND,
-            id="Non existent client UID",
-        ),
-    ],
-)
-def test_get_client(test_client, user_info, sql_factory, client_uid, expected_status):
-    client = sql_factory.client.create(uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
-
+def test_get_client(test_client, user_info):
     response = test_client.get(
-        f"/api/v1/clients/{client_uid}",
+        f"/api/v1/clients/{user_info.client_2.uid}",
         headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
     )
 
-    assert response.status_code == expected_status
-    if response.status_code == status.HTTP_200_OK:
-        expected = {"name": client.name, "uid": client.uid}
-        assert response.json() == expected
+    assert response.status_code == status.HTTP_200_OK
+
+    expected = {"name": user_info.client_2.name, "uid": str(user_info.client_2.uid)}
+    assert response.json() == expected
+
+
+def test_get_client_non_existent(test_client, user_info):
+    response = test_client.get(
+        "/api/v1/clients/ac2ef360-0002-4a8b-bf9b-84b7cf779960",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_list_clients(test_client, user_info, sql_factory):
