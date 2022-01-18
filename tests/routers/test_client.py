@@ -66,15 +66,32 @@ def test_get_client(test_client, user_info, sql_factory, client_uid, expected_st
 
 
 def test_list_clients(test_client, user_info, sql_factory):
-    clients = sql_factory.client.create_batch(size=3)
+    # Create 3 Clients that the request user has been assigned to. This will be shown in response.
+    client_users = sql_factory.client_user.create_batch(size=3, user=user_info.user)
+    # Create 3 other Clients the request user is not related to. This will NOT be shown.
+    sql_factory.client.create_batch(size=3)
 
     response = test_client.get(
         "/api/v1/clients", headers={"X-Apigateway-Api-Userinfo": user_info.header_payload}
     )
 
     assert response.status_code == status.HTTP_200_OK
-    expected = [{"name": client.name, "uid": str(client.uid)} for client in clients]
-    assert response.json() == expected
+
+    # The clients we created above for the user...
+    expected = [
+        {"name": client_user.client.name, "uid": str(client_user.client.uid)}
+        for client_user in client_users
+    ]
+    # ...and the ones the user already belong, from conftest.
+    expected.extend(
+        [
+            {"name": user_info.client_1.name, "uid": str(user_info.client_1.uid)},
+            {"name": user_info.client_2.name, "uid": str(user_info.client_2.uid)},
+        ]
+    )
+    assert len(response.json()) == 5
+    for client in response.json():
+        assert client in expected
 
 
 @pytest.mark.parametrize(
@@ -131,8 +148,8 @@ def test_delete_client(
             )
             == 1
         )
-        # GCPUsers are still in the system.
-        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 4
+        # GCPUsers are still in the system (4 created, and 1 for `user_info` fixture).
+        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 5
 
 
 @pytest.mark.parametrize(
