@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from fastapi import status
@@ -109,23 +111,36 @@ def test_list_clients(test_client, user_info, sql_factory):
         ),
     ],
 )
+@patch("user_management.services.gcp_identity.delete_users")
 def test_delete_client(
-    test_client, user_info, test_db_session, sql_factory, client_uid, expected_status
+    mock_identity_platform,  # pylint: disable=unused-argument
+    test_client,
+    staff_user_info,
+    test_db_session,
+    sql_factory,
+    client_uid,
+    expected_status,
 ):
     # Create a Client and assign 3 GCPUsers.
     client = sql_factory.client.create(uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
-    sql_factory.client_user.create_batch(size=3, client=client)
+    client_users = sql_factory.client_user.create_batch(size=3, client=client)
 
-    # Now, create a GCPUser and assign it to the initial Client and also to another Client.
-    client_user = sql_factory.client_user.create()
-    sql_factory.client_user.create(client=client, user=client_user.user)  # Initial Client.
+    # Now, create 2 more GCPUsers and assign it to the initial Client:
+    # - One is a regular user, and is also assigned to another Client.
+    # - Other is an HB Staff user, and it is assigned only to the initial Client.
+    gcp_user = sql_factory.gcp_user.create()
+    staff_gcp_user = sql_factory.gcp_user.create(staff=True)
+    new_client_user = sql_factory.client_user.create(user=gcp_user)
+    sql_factory.client_user.create(client=client, user=gcp_user)  # Initial Client.
+    sql_factory.client_user.create(client=client, user=staff_gcp_user)  # Initial Client.
     test_db_session.commit()
 
     response = test_client.delete(
         f"/api/v1/clients/{client_uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
     )
 
+    # We deleted `client`, which had 4 users.
     assert response.status_code == expected_status
     if expected_status == status.HTTP_204_NO_CONTENT:
         # Check that client users have been deleted...
@@ -144,12 +159,26 @@ def test_delete_client(
         # ...except the one created last, which also belongs to another Client, so it must remain.
         assert (
             test_db_session.scalar(
-                select(func.count()).select_from(ClientUser).filter_by(client=client_user.client)
+                select(func.count())
+                .select_from(ClientUser)
+                .filter_by(client=new_client_user.client)
             )
             == 1
         )
-        # GCPUsers are still in the system (4 created, and 1 for `user_info` fixture).
-        assert test_db_session.scalar(select(func.count()).select_from(GCPUser)) == 5
+
+        # GCPUsers from `client` that didn't belong to any other Client have been removed from the
+        # system (3 in total). The one that belonged to another Client and the staff user remains.
+        assert (
+            test_db_session.scalar(
+                select(func.count())
+                .select_from(GCPUser)
+                .filter(GCPUser.uid.in_([n.gcp_user_uid for n in client_users]))
+            )
+            == 0
+        )
+
+        assert test_db_session.scalar(select(GCPUser).filter_by(uid=gcp_user.uid))
+        assert test_db_session.scalar(select(GCPUser).filter_by(uid=staff_gcp_user.uid))
 
 
 @pytest.mark.parametrize(
