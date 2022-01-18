@@ -1,9 +1,10 @@
 from typing import List
 
-from sqlalchemy import select
+from pydantic import UUID4
+from sqlalchemy import delete, func, select
 
 from user_management.core.dependencies import User
-from user_management.models import Client, ClientUser
+from user_management.models import Client, ClientUser, GCPUser
 from user_management.repositories.base import AlchemyRepository, Order, Schema
 from user_management.schemas import ClientSchema
 
@@ -25,3 +26,21 @@ class ClientRepository(AlchemyRepository):
             .all()
         )
         return [self._response(entity) for entity in results]
+
+    def delete_client_only_users(self, uid: UUID4) -> List[UUID4]:
+        """Deletes `GCPUser`s that are only members of the `Client` specified by `uid`."""
+        client_only_users = (
+            self.db.execute(
+                select(GCPUser.uid)
+                .join(ClientUser)
+                .where(GCPUser.uid.in_(select(ClientUser.gcp_user_uid).filter_by(client_uid=uid)))
+                .group_by(GCPUser.uid)
+                .having(func.count() < 2)
+            )
+            .scalars()
+            .all()
+        )
+        self.db.execute(delete(GCPUser).where(GCPUser.uid.in_(client_only_users)))
+        self.db.commit()
+
+        return client_only_users
