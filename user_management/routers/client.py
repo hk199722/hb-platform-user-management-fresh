@@ -29,7 +29,7 @@ def get_client(uid: UUID4, user: User = Depends(get_user), db: DBSession = Depen
 
 @router.get("", response_model=List[ClientSchema])
 def list_clients(user: User = Depends(get_user), db: DBSession = Depends(get_database)):
-    return ClientService(db).list_clients()
+    return ClientService(db).list_clients(user=user)
 
 
 @router.patch("/{uid}", response_model=ClientSchema)
