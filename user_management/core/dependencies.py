@@ -66,8 +66,8 @@ class RequestUserCheck:
             raise AuthenticationError({"message": "Invalid user information payload."}) from error
 
     def __call__(self, x_apigateway_api_userinfo: str = Header(None)) -> User:
-        """Validates the GCP user info HTT header. In case the object has been instantiated with the
-        parameter `check_staff` set to `True`, it also checks that the user is an HB Staff user.
+        """Validates the GCP user info HTTP header. In case the object has been instantiated with
+        the parameter `check_staff` set to `True`, it also checks that the user is an HB Staff user.
         """
         user = self.get_user(x_apigateway_api_userinfo=x_apigateway_api_userinfo)
 
@@ -77,5 +77,6 @@ class RequestUserCheck:
         return user
 
 
+# Actual authentication dependencies to be injected in routers.
 user_check = RequestUserCheck()
 staff_check = RequestUserCheck(check_staff=True)
