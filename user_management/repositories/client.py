@@ -33,7 +33,10 @@ class ClientRepository(AlchemyRepository):
             self.db.execute(
                 select(GCPUser.uid)
                 .join(ClientUser)
-                .where(GCPUser.uid.in_(select(ClientUser.gcp_user_uid).filter_by(client_uid=uid)))
+                .where(
+                    GCPUser.uid.in_(select(ClientUser.gcp_user_uid).filter_by(client_uid=uid)),
+                    GCPUser.staff == False,
+                )
                 .group_by(GCPUser.uid)
                 .having(func.count() < 2)
             )
