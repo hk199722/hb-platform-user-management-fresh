@@ -44,6 +44,6 @@ def update_client(
 
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_client(
-    uid: UUID4, user: User = Depends(user_check), db: DBSession = Depends(get_database)
+    uid: UUID4, user: User = Depends(staff_check), db: DBSession = Depends(get_database)
 ):
     return ClientService(db).delete_client(uid=uid)
