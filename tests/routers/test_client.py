@@ -203,14 +203,20 @@ def test_delete_client(
     ],
 )
 def test_update_client(
-    test_client, user_info, test_db_session, sql_factory, client_uid, new_name, expected_status
+    test_client,
+    staff_user_info,
+    test_db_session,
+    sql_factory,
+    client_uid,
+    new_name,
+    expected_status,
 ):
     sql_factory.client.create(name="AgroCorp", uid="ac2ef360-0002-4a8b-bf9b-84b7cf779960")
     sql_factory.client.create(name="Fields Ltd.")
 
     response = test_client.patch(
         f"/api/v1/clients/{client_uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
         json={"name": new_name},
     )
 
