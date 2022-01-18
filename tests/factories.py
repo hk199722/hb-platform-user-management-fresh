@@ -36,9 +36,10 @@ class ClientFactory(BaseModelFactory):
 class GCPUserFactory(BaseModelFactory):
     uid = factory.Sequence(lambda n: uuid.uuid4())
     name = factory.Sequence(lambda n: f"GCPUser-{n}")
-    email = factory.Sequence(lambda n: f"user-{n}@hummingbirdtech.com")
+    email = factory.LazyAttribute(
+        lambda o: f"{o.name.lower().replace(' ', '-')}@hummingbirdtech.com"
+    )
     phone_number = factory.LazyFunction(lambda: f"+44{random.randint(2000000000,3999999999)}")
-    staff = factory.fuzzy.FuzzyChoice([True, False])
 
     class Meta:
         model = GCPUser

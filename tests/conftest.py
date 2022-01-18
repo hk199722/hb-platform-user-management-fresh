@@ -2,6 +2,7 @@ import base64
 import functools
 import json
 import os
+from collections import namedtuple
 from time import time
 from typing import Generator
 
@@ -16,7 +17,11 @@ from user_management.core.database import Base
 from user_management.core.dependencies import get_database
 from user_management.core.config.settings import get_settings
 from user_management.main import create_app
+from user_management.models import Role
 from tests.factories import SQLModelFactory
+
+
+RequestUser = namedtuple("RequestUser", ["user", "client_1", "client_2", "header_payload"])
 
 
 @functools.lru_cache
@@ -159,36 +164,97 @@ def testing_db_session(disposable_database: Connection) -> Generator[Session, No
         session.close()
 
 
-@pytest.fixture
-def sql_factory(test_db_session) -> Generator[SQLModelFactory, None, None]:
+@pytest.fixture(name="sql_factory")
+def sql_factory_init(test_db_session) -> Generator[SQLModelFactory, None, None]:
     """Makes SQL models factories available in tests."""
     yield SQLModelFactory.initialize(test_db_session)
 
 
 @pytest.fixture
-def test_user_info() -> Generator[str, None, None]:
+def user_info(sql_factory) -> Generator[RequestUser, None, None]:
     """GCP API Gateway 'X-Apigateway-Api-Userinfo' HTTP header value. To authenticate/authorize user
     in tests requiring API calls.
+
+    Usage:
+
+        def test_auth(test_client, user_info):
+            response = test_client.get(
+                "/api/v1/users",
+                headers={"X-Apigateway-Api-Userinfo": user_info.header_payload}
+            )
+            assert response.status_code == 200
+
+    The returned object contains also the `GCPUser` and the 2 `Client.uid`s she's related to, for
+    convenience.
     """
+    gcp_user = sql_factory.gcp_user.create(name="Request User")
+    client_user_1 = sql_factory.client_user.create(user=gcp_user, role=Role.SUPERUSER)
+    client_user_2 = sql_factory.client_user.create(user=gcp_user, role=Role.NORMAL_USER)
     timestamp = int(time())
 
-    # TODO: Add user claims to the next dictionary.
-    user_info = {
-        "name": "test_user@hummingbirdtech.com",
+    gcp_user_info = {
+        "name": gcp_user.name,
+        "staff": gcp_user.staff,
+        "roles": {
+            str(client_user_1.client_uid): client_user_1.role.value,
+            str(client_user_2.client_uid): client_user_2.role.value,
+        },
         "iss": "https://securetoken.google.com/hbt-staging",
         "aud": "hbt-staging",
         "auth_time": timestamp,
-        "user_id": "1aaeaf8a-829e-45ac-a5f4-e6177633d62d",
-        "sub": "1aaeaf8a-829e-45ac-a5f4-e6177633d62d",
+        "user_id": str(gcp_user.uid),
+        "sub": str(gcp_user.uid),
         "iat": timestamp,
         "exp": timestamp + 3600,
-        "email": "test_user@hummingbirdtech.com",
+        "email": gcp_user.email,
         "email_verified": True,
         "firebase": {
-            "identities": {"email": ["test_user@hummingbirdtech.com"]},
+            "identities": {"email": [gcp_user.email]},
             "sign_in_provider": "password",
         },
-        "uid": "1aaeaf8a-829e-45ac-a5f4-e6177633d62d",
+        "uid": str(gcp_user.uid),
     }
 
-    yield base64.b64encode(json.dumps(user_info).encode()).decode()
+    payload = base64.b64encode(json.dumps(gcp_user_info).encode()).decode()
+
+    yield RequestUser(
+        user=gcp_user,
+        client_1=client_user_1.client,
+        client_2=client_user_2.client,
+        header_payload=payload,
+    )
+
+
+@pytest.fixture
+def staff_user_info(sql_factory) -> Generator[RequestUser, None, None]:
+    """GCP API Gateway 'X-Apigateway-Api-Userinfo' HTTP header value. To authenticate/authorize user
+    in tests requiring API calls.
+
+    Similar to `user_info` fixture, but it delivers a HB Staff user.
+    """
+    gcp_user = sql_factory.gcp_user.create(name="Request User", staff=True)
+
+    timestamp = int(time())
+
+    staff_gcp_user_info = {
+        "name": gcp_user.name,
+        "staff": gcp_user.staff,
+        "iss": "https://securetoken.google.com/hbt-staging",
+        "aud": "hbt-staging",
+        "auth_time": timestamp,
+        "user_id": str(gcp_user.uid),
+        "sub": str(gcp_user.uid),
+        "iat": timestamp,
+        "exp": timestamp + 3600,
+        "email": gcp_user.email,
+        "email_verified": True,
+        "firebase": {
+            "identities": {"email": [gcp_user.email]},
+            "sign_in_provider": "password",
+        },
+        "uid": str(gcp_user.uid),
+    }
+
+    payload = base64.b64encode(json.dumps(staff_gcp_user_info).encode()).decode()
+
+    yield RequestUser(user=gcp_user, client_1=None, client_2=None, header_payload=payload)

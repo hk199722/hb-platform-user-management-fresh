@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, Query
+from sqlalchemy.sql.selectable import Select
 
 from user_management.core.database import Base
 from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
@@ -100,9 +101,7 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
 
             raise e from None
 
-    def _filter_and_order(self, order: Order = None, **kwargs) -> Query:
-        query = select(self.model)
-
+    def _filter_and_order(self, query: Select, order: Order = None, **kwargs) -> Query:
         if kwargs:
             query = query.filter_by(**kwargs)
         if order:
@@ -137,7 +136,13 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
 
     def list(self, order_by: Order = None, **filters) -> List[Schema]:
         """Lists all the objects for the given filter and order"""
-        results = self.db.execute(self._filter_and_order(order=order_by, **filters)).scalars().all()
+        query = select(self.model)
+
+        results = (
+            self.db.execute(self._filter_and_order(query=query, order=order_by, **filters))
+            .scalars()
+            .all()
+        )
         return [self._response(entity) for entity in results]
 
     def update(self, pk: Any, schema: BaseModel) -> Schema:
