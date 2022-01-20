@@ -83,9 +83,10 @@ def test_list_clients(test_client, user_info, sql_factory):
             {"name": user_info.client_2.name, "uid": str(user_info.client_2.uid)},
         ]
     )
-    assert len(response.json()) == 5
-    for client in response.json():
-        assert client in expected
+
+    data = response.json()
+    for client in expected:
+        assert client in data
 
 
 @pytest.mark.parametrize(
