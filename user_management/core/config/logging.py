@@ -1,7 +1,7 @@
 from user_management.core.config.settings import get_settings
 
 
-LOGGING_LEVEL = "DEBUG" if get_settings().debug is True else "INFO"
+LOGGING_LEVEL = "DEBUG" if get_settings().debug else "INFO"
 
 logging_config = {
     "version": 1,
