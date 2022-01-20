@@ -121,7 +121,5 @@ class GCPIdentityPlatformService:
                 remove_users(gcp_users=chunk)
                 chunk.clear()
 
-            continue
-
         if chunk:
             remove_users(gcp_users=chunk)
