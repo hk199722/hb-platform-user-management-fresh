@@ -9,6 +9,7 @@ from pydantic import UUID4
 from user_management.core.config.settings import get_settings
 from user_management.core.dependencies import DBSession
 from user_management.repositories.gcp_user import GCPUserRepository
+from user_management.services.gcp_identity import GCPIdentityPlatformService
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class MailerService:
         settings = get_settings()
 
         self.gcp_user_repository = GCPUserRepository(db)
+        self.gcp_identity_service = GCPIdentityPlatformService()
         self.client = PublisherClient(
             publisher_options=PublisherOptions(
                 flow_control=PublishFlowControl(
@@ -45,7 +47,10 @@ class MailerService:
         message = {
             "message_type": "PASSWORD_RESET",
             "email": gcp_user.email,
-            "context": {"full_name": gcp_user.name, "reset_password_link": "abcdefghijkl"},
+            "context": {
+                "full_name": gcp_user.name,
+                "reset_password_link": self.gcp_identity_service.get_password_reset_link(gcp_user),
+            },
         }
         published = self.client.publish(self.topic_path, self.encode_message(message))
         response = published.result()
