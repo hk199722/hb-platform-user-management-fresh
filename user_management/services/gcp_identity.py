@@ -128,5 +128,5 @@ class GCPIdentityPlatformService:
 
     @staticmethod
     def get_password_reset_link(gcp_user: GCPUserSchema) -> str:
-        """Generates and the "reset password" link for the given GCP-IP user email."""
+        """Generates and returns the "reset password" link for the given GCP-IP user email."""
         return generate_password_reset_link(email=gcp_user.email)
