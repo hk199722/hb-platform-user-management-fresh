@@ -2,7 +2,7 @@ from enum import Enum
 
 from sqlalchemy import Boolean, Column, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.types import Enum as SQLEnum
 
@@ -67,3 +67,14 @@ class ClientFarm(Base):
 
     def __repr__(self):
         return f"<ClientFarm: farm_uid={self.farm_uid}, client_uid={self.client_uid}>"
+
+
+class SecurityToken(Base):
+    __tablename__ = "security_token"
+
+    uid = Column(UUID(as_uuid=True), server_default=func.uuid_generate_v4(), primary_key=True)
+    gcp_user_uid = Column(
+        UUID(as_uuid=True), ForeignKey("gcp_user.uid", ondelete="CASCADE"), unique=True
+    )
+
+    user = relationship("GCPUser", backref=backref("security_token", uselist=False))
