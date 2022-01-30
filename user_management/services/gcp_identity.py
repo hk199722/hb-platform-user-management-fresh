@@ -1,11 +1,12 @@
 import logging
-from typing import Dict, TypedDict, Union
+from typing import Dict, List, TypedDict, Union
 
 from pydantic import UUID4
 
 from firebase_admin.auth import (
     create_user,
     delete_user,
+    delete_users,
     EmailAlreadyExistsError,
     PhoneNumberAlreadyExistsError,
     set_custom_user_claims,
@@ -95,7 +96,30 @@ class GCPIdentityPlatformService:
             self._handle_gcp_exception(error, gcp_user)
 
     def remove_gcp_user(self, uid: UUID4) -> None:
+        """Removes a user from GCP Identity Platform remote backend, given its GCP-IP user ID."""
         try:
             delete_user(uid=str(uid))
         except Exception as error:  # pylint: disable=broad-except
             self._handle_gcp_exception(error, uid)
+
+    @staticmethod
+    def remove_bulk_gcp_users(uids: List[UUID4]) -> None:
+        """Given a list of user IDs, removes them in bulk from GCP-IP backend."""
+        chunk: list = []
+
+        def remove_users(gcp_users: list) -> None:
+            try:
+                delete_users(uids=gcp_users)
+            except Exception:  # pylint: disable=broad-except
+                logger.exception("Error when trying to delete users in GCP-IP.")
+
+        # GCP-IP/Firebase SDK allows a maximum of 1000 user UUIDs to be submitted for deletion at
+        # once. We are likely not reaching that limit, but is just safer to behave like if we will.
+        for count, uid in enumerate(uids, 1):
+            chunk.append(str(uid))
+            if count % 1000 == 0:
+                remove_users(gcp_users=chunk)
+                chunk.clear()
+
+        if chunk:
+            remove_users(gcp_users=chunk)

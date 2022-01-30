@@ -113,3 +113,11 @@ class AuthService:
         )
         if not superuser:
             raise AuthorizationError()
+
+    def check_client_member(self, request_user: User, client: UUID4) -> None:
+        """Checks if the given `request_user` does have permissions to read `client` data."""
+        if request_user.staff:
+            return None
+
+        if str(client) not in request_user.roles.keys():
+            raise ResourceNotFoundError()
