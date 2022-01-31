@@ -106,6 +106,13 @@ jobs:
 
   test-alembic-migrations:
     executor: tests-runner
+    environment:
+      GOOGLE_PROJECT_ID: << parameters.project_id >>
+    parameters:
+      env:
+        type: string
+      project_id:
+        type: string
     steps:
       - checkout
       - update-poetry
@@ -199,6 +206,7 @@ workflows:
     jobs:
       - build
       - test-alembic-migrations:
+          project_id: hbt-staging
           requires:
             - build
       - test:
