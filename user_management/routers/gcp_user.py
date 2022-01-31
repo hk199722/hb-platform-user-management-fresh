@@ -42,7 +42,7 @@ def update_gcp_user(
     return GCPUserService(db).update_gcp_user(uid=uid, gcp_user=gcp_user, user=user)
 
 
-@router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_gcp_user(
     uid: UUID4, user: User = Depends(user_check), db: DBSession = Depends(get_database)
 ):
