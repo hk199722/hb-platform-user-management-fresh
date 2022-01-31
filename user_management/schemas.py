@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, UUID4, validator
+from pydantic import BaseModel, EmailStr, SecretStr, UUID4, validator
 
 from user_management.models import Role
 
@@ -104,3 +104,23 @@ class ClientFarmSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class SecurityTokenSchema(BaseModel):
+    uid: UUID4
+    gcp_user_uid: UUID4
+
+    class Config:
+        orm_mode = True
+
+
+class CreatePasswordSchema(BaseModel):
+    password: SecretStr
+    verified_password: SecretStr
+
+    @validator("verified_password")
+    def passwords_match(cls, value, values):  # pylint: disable=no-self-argument
+        if "password" in values and value != values["password"]:
+            raise ValueError("Passwords do not match.")
+
+        return value
