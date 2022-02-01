@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseSettings, DirectoryPath, PostgresDsn, SecretStr
+from pydantic import BaseSettings, DirectoryPath, HttpUrl, PostgresDsn, SecretStr
 from pydantic.schema import Pattern
 
 
@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_pool_size: int = 40
     database_max_overflow: int = 10
     database_pool_recycle: int = 3600
+
+    # Platform services
+    accounts_base_url: HttpUrl = "http://accounts.staging.hummingbirdtech.com"
 
     # CORS middleware
     cors_allow_origins: Optional[Pattern]
