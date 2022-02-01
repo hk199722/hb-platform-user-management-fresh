@@ -113,7 +113,7 @@ class AlchemyRepository(Generic[Schema], metaclass=MetaAlchemyRepository):
         if entity := self.db.get(self.model, pk):
             return entity
 
-        raise ResourceNotFoundError({"message": f"No {self.model_name} found with id {pk}"})
+        raise ResourceNotFoundError({"message": f"No {self.model_name} found with ID {pk}"})
 
     def _response(self, entity: Base) -> Schema:
         values = {key: getattr(entity, key) for key in self.properties.keys()}

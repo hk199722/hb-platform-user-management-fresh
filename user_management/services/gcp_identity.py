@@ -130,3 +130,12 @@ class GCPIdentityPlatformService:
     def get_password_reset_link(gcp_user: GCPUserSchema) -> str:
         """Generates and returns the "reset password" link for the given GCP-IP user email."""
         return generate_password_reset_link(email=gcp_user.email)
+
+    def set_password(self, gcp_user_uid: UUID4, password: str):
+        """Sets up the user password for the given GCP-IP user ID."""
+        try:
+            update_user(uid=gcp_user_uid, password=password)
+        except Exception as error:  # pylint: disable=broad-except
+            self._handle_gcp_exception(error, gcp_user_uid)
+
+        logger.info("User %s password has been successfully set up.", gcp_user_uid)
