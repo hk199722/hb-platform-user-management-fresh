@@ -14,7 +14,8 @@ from firebase_admin.auth import (
 from firebase_admin.exceptions import InvalidArgumentError
 from sqlalchemy import func, select
 
-from user_management.models import Client, ClientUser, GCPUser, Role
+from user_management.core.config.settings import get_settings
+from user_management.models import Client, ClientUser, GCPUser, Role, SecurityToken
 from user_management.schemas import GCPUserSchema
 
 
@@ -88,7 +89,9 @@ from user_management.schemas import GCPUserSchema
     ],
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+@patch("user_management.services.mailer.PublisherClient")
 def test_create_gcp_user(
+    mock_pubsub,
     mock_identity_platform,
     test_client,
     user_info,
@@ -101,6 +104,7 @@ def test_create_gcp_user(
     expected_status,
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_pubsub = mock_pubsub()
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
@@ -136,6 +140,23 @@ def test_create_gcp_user(
                 select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
             )
             assert client_user is not None
+
+        # Security Token created.
+        token = test_db_session.scalar(select(SecurityToken).filter_by(gcp_user_uid=gcp_user_uid))
+        assert token is not None
+
+        # Welcome email sent.
+        message = {
+            "message_type": "WELCOME",
+            "email": gcp_user.email,
+            "context": {
+                "full_name": gcp_user.name,
+                "link": f"{get_settings().accounts_base_url}/new-user/set-password/{gcp_user.uid}/{token.uid}",
+            },
+        }
+        mock_pubsub.publish.assert_called_with(
+            mock_pubsub.topic_path(), json.dumps(message).encode("utf-8")
+        )
 
 
 @pytest.mark.parametrize(
