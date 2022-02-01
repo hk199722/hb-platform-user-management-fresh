@@ -7,9 +7,11 @@ from user_management.models import GCPUser, Role
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
-def test_create_gcp_user_success(mock_gcp_ip, test_client, user_info, test_db_session):
+@patch("user_management.services.mailer.PublisherClient")
+def test_create_gcp_user_success(mock_pubsub, mock_gcp_ip, test_client, user_info, test_db_session):
     """Users with a `SUPERUSER` role in a Client can create new users within that client."""
     mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_pubsub().sync_gcp_user.side_effect = None  # Mock out GCP Pub/Sub.
 
     response = test_client.post(
         "/api/v1/users",
@@ -33,11 +35,13 @@ def test_create_gcp_user_success(mock_gcp_ip, test_client, user_info, test_db_se
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+@patch("user_management.services.mailer.PublisherClient")
 def test_create_gcp_user_staff(
-    mock_gcp_ip, test_client, staff_user_info, test_db_session, sql_factory
+    mock_pubsub, mock_gcp_ip, test_client, staff_user_info, test_db_session, sql_factory
 ):
     """HB Staff users can always create users for every Client with no restrictions."""
     mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_pubsub().sync_gcp_user.side_effect = None  # Mock out GCP Pub/Sub.
     client = sql_factory.client.create()
 
     response = test_client.post(
@@ -60,11 +64,13 @@ def test_create_gcp_user_staff(
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+@patch("user_management.services.mailer.PublisherClient")
 def test_create_gcp_user_staff_no_client(
-    mock_gcp_ip, test_client, staff_user_info, test_db_session
+    mock_pubsub, mock_gcp_ip, test_client, staff_user_info, test_db_session
 ):
     """HB Staff users can create users with no Clients related."""
     mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_pubsub().sync_gcp_user.side_effect = None  # Mock out GCP Pub/Sub.
 
     response = test_client.post(
         "/api/v1/users",

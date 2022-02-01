@@ -856,7 +856,14 @@ def test_delete_client_user(test_client, user_info, test_db_session, sql_factory
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
 def test_create_gcp_user_password(
-    mock_identity_platform, test_client, sql_factory, user_uid, token_uid, payload, expected_status
+    mock_identity_platform,
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_uid,
+    token_uid,
+    payload,
+    expected_status,
 ):
     gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
     sql_factory.security_token.create(uid="95a78c35-ede7-4b8b-8c88-a3ce2c105406", user=gcp_user)
@@ -868,10 +875,19 @@ def test_create_gcp_user_password(
 
     assert response.status_code == expected_status
 
-    # Valid data submitted. Check up password creation.
+    # Valid data submitted. Check up password creation and Security Token disposal.
     if expected_status == status.HTTP_204_NO_CONTENT:
+        # Password creation triggered with the GCP-IP SDK function.
         mock_identity_platform().set_password.assert_called_with(
             gcp_user_uid=uuid.UUID(gcp_user.uid), password="testing"
+        )
+
+        # Security Token deleted from database, as it has been successfully used.
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(SecurityToken).filter_by(gcp_user_uid=gcp_user.uid)
+            )
+            == 0
         )
 
     # Invalid data submitted: passwords do not match.
