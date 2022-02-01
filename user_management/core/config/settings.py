@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     database_pool_recycle: int = 3600
 
     # Platform services
-    accounts_base_url: HttpUrl = "http://accounts.staging.hummingbirdtech.com"
+    accounts_base_url: HttpUrl
 
     # CORS middleware
     cors_allow_origins: Optional[Pattern]
