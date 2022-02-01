@@ -8,13 +8,14 @@ from firebase_admin.auth import (
     delete_user,
     delete_users,
     EmailAlreadyExistsError,
+    generate_password_reset_link,
     PhoneNumberAlreadyExistsError,
     set_custom_user_claims,
     UidAlreadyExistsError,
     update_user,
     UserNotFoundError,
 )
-from firebase_admin.exceptions import InvalidArgumentError, PermissionDeniedError
+from firebase_admin.exceptions import FirebaseError, InvalidArgumentError, PermissionDeniedError
 from user_management.core.exceptions import (
     RemoteServiceError,
     RequestError,
@@ -45,6 +46,7 @@ class GCPIdentityPlatformService:
             UidAlreadyExistsError: (ResourceConflictError, "Duplicated UID."),
             UserNotFoundError: (ResourceNotFoundError, "User not found."),
             PermissionDeniedError: (RemoteServiceError, str(error)),
+            FirebaseError: (RemoteServiceError, str(error)),
             ValueError: (RequestError, str(error)),
             # Handle any unexpected exception form GCP-IP.
             Exception: (RemoteServiceError, str(error)),
@@ -123,3 +125,8 @@ class GCPIdentityPlatformService:
 
         if chunk:
             remove_users(gcp_users=chunk)
+
+    @staticmethod
+    def get_password_reset_link(gcp_user: GCPUserSchema) -> str:
+        """Generates and returns the "reset password" link for the given GCP-IP user email."""
+        return generate_password_reset_link(email=gcp_user.email)

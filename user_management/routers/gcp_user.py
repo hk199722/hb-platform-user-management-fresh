@@ -5,7 +5,7 @@ from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database, user_check, User
 from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
-from user_management.services.gcp_user import GCPUserService
+from user_management.services import GCPUserService, MailerService
 
 
 router = APIRouter()
@@ -59,3 +59,10 @@ def delete_gcp_user_role(
     db: DBSession = Depends(get_database),
 ):
     return GCPUserService(db).delete_gcp_user_role(uid=uid, client_uid=client_uid, user=user)
+
+
+@router.get(
+    "/{uid}/reset-password", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
+)
+async def reset_gcp_user_password(uid: UUID4, db: DBSession = Depends(get_database)):
+    MailerService(db).reset_password_message(gcp_user_uid=uid)

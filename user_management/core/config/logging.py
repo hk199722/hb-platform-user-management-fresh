@@ -34,5 +34,10 @@ logging_config = {
             "propagate": False,
             "level": LOGGING_LEVEL,
         },
+        "google.cloud.pubsub_v1": {
+            "handlers": ["console"],
+            "propagate": False,
+            "level": LOGGING_LEVEL,
+        },
     },
 }

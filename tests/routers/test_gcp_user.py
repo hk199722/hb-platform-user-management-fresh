@@ -1,3 +1,4 @@
+import json
 import uuid
 from unittest.mock import patch
 
@@ -14,6 +15,7 @@ from firebase_admin.exceptions import InvalidArgumentError
 from sqlalchemy import func, select
 
 from user_management.models import Client, ClientUser, GCPUser, Role
+from user_management.schemas import GCPUserSchema
 
 
 @pytest.mark.parametrize(
@@ -796,3 +798,53 @@ def test_delete_client_user(test_client, user_info, test_db_session, sql_factory
         )
         == 0
     )
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "expected_status"],
+    [
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            status.HTTP_204_NO_CONTENT,
+            id="Successful password reset link request",
+        ),
+        pytest.param(
+            "a0723fb5-6b0f-45ec-a131-6a6a1bd87741",
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong password reset link request - Non existent user UID",
+        ),
+    ],
+)
+@patch("user_management.services.mailer.GCPIdentityPlatformService")
+@patch("user_management.services.mailer.PublisherClient")
+def test_reset_gcp_user_password(
+    mock_pubsub, mock_identity_platform, test_client, sql_factory, user_uid, expected_status
+):
+    mock_identity_platform = mock_identity_platform()
+    mock_pubsub = mock_pubsub()
+    link = "http://hummingbirdtech.com/reset-link"
+    mock_identity_platform.get_password_reset_link.return_value = link
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+
+    response = test_client.get(f"/api/v1/users/{user_uid}/reset-password")
+
+    assert response.status_code == expected_status
+
+    if expected_status == status.HTTP_204_NO_CONTENT:
+        message = {
+            "message_type": "PASSWORD_RESET",
+            "email": gcp_user.email,
+            "context": {"full_name": gcp_user.name, "reset_password_link": link},
+        }
+        mock_pubsub.publish.assert_called_with(
+            mock_pubsub.topic_path(), json.dumps(message).encode("utf-8")
+        )
+        mock_identity_platform.get_password_reset_link.assert_called_with(
+            GCPUserSchema(
+                uid=gcp_user.uid,
+                name=gcp_user.name,
+                phone_number=gcp_user.phone_number,
+                email=gcp_user.email,
+                clients=[],
+            )
+        )
