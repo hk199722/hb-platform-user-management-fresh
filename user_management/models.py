@@ -74,7 +74,7 @@ class SecurityToken(Base):
 
     uid = Column(UUID(as_uuid=True), server_default=func.uuid_generate_v4(), primary_key=True)
     gcp_user_uid = Column(
-        UUID(as_uuid=True), ForeignKey("gcp_user.uid", ondelete="CASCADE"), unique=True
+        UUID(as_uuid=True), ForeignKey("gcp_user.uid", ondelete="CASCADE"), primary_key=True
     )
 
     user = relationship("GCPUser", backref=backref("security_token", uselist=False))
