@@ -106,6 +106,10 @@ class ClientFarmSchema(BaseModel):
         orm_mode = True
 
 
+class CreateSecurityTokenSchema(BaseModel):
+    gcp_user_uid: UUID4
+
+
 class SecurityTokenSchema(BaseModel):
     uid: UUID4
     gcp_user_uid: UUID4
