@@ -93,4 +93,5 @@ class GCPUserService:
         self.security_token_repository.get(pk={"gcp_user_uid": uid, "uid": token})
         self.gcp_identity_service.set_password(gcp_user_uid=uid, password=password)
 
-        # TODO: Delete the security token, since it has been used already.
+        # Delete the security token, since it has been used already.
+        self.security_token_repository.delete(pk={"gcp_user_uid": uid, "uid": token})
