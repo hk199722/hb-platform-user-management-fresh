@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sqlalchemy import Boolean, Column, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
@@ -76,5 +76,6 @@ class SecurityToken(Base):
     gcp_user_uid = Column(
         UUID(as_uuid=True), ForeignKey("gcp_user.uid", ondelete="CASCADE"), primary_key=True
     )
+    created = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("GCPUser", backref=backref("security_token", uselist=False))
