@@ -34,6 +34,7 @@ executors:
       POSTGRES_PASSWORD: password
       POSTGRES_HOST: localhost
       DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
+      ACCOUNTS_BASE_URL: https://accounts.staging.hummingbird.com
 
 
 commands:
@@ -108,7 +109,6 @@ jobs:
     executor: tests-runner
     environment:
       GOOGLE_PROJECT_ID: << parameters.project_id >>
-      ACCOUNTS_BASE_URL: "https://accounts.staging.hummingbird.com"
     parameters:
       project_id:
         type: string
