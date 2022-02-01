@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     gcp_request_timeout: int = 30
 
     # GCP Pub/Sub configuration
-    gcp_project: str
+    google_project_id: str
     topic_name: str = "mailing"
     message_limit: int = 500
     byte_limit: int = 2 * 1024 * 1024  # Max size in bytes of the total awaiting messages.

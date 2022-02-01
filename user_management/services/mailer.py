@@ -36,7 +36,7 @@ class MailerService:
             )
         )
         self.topic_path = self.client.topic_path(  # pylint: disable=no-member
-            project=settings.gcp_project, topic=settings.topic_name
+            project=settings.google_project_id, topic=settings.topic_name
         )
 
     @staticmethod
