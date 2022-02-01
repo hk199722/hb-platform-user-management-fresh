@@ -801,6 +801,72 @@ def test_delete_client_user(test_client, user_info, test_db_session, sql_factory
 
 
 @pytest.mark.parametrize(
+    ["user_uid", "token_uid", "payload", "expected_status"],
+    [
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "95a78c35-ede7-4b8b-8c88-a3ce2c105406",
+            {"password": "testing", "verified_password": "testing"},
+            status.HTTP_204_NO_CONTENT,
+            id="Successful password creation",
+        ),
+        pytest.param(
+            "fe524b0f-3ee3-4856-b297-84f1a458f374",
+            "95a78c35-ede7-4b8b-8c88-a3ce2c105406",
+            {"password": "testing", "verified_password": "testing"},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong password creation request - Non existent user UID",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "3246b228-35f0-4a80-87f9-4b54bb51d699",
+            {"password": "testing", "verified_password": "testing"},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong password creation request - Non existent security token",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "95a78c35-ede7-4b8b-8c88-a3ce2c105406",
+            {"password": "testing", "verified_password": "DIFFERENT_PASSWORD"},
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong password creation request - Non existent security token",
+        ),
+    ],
+)
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_create_gcp_user_password(
+    mock_identity_platform, test_client, sql_factory, user_uid, token_uid, payload, expected_status
+):
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.security_token.create(uid="95a78c35-ede7-4b8b-8c88-a3ce2c105406", user=gcp_user)
+
+    response = test_client.post(
+        f"/api/v1/users/{user_uid}/create-password/{token_uid}",
+        json=payload,
+    )
+
+    assert response.status_code == expected_status
+
+    # Valid data submitted. Check up password creation.
+    if expected_status == status.HTTP_204_NO_CONTENT:
+        mock_identity_platform().set_password.assert_called_with(
+            gcp_user_uid=uuid.UUID(gcp_user.uid), password="testing"
+        )
+
+    # Invalid data submitted: passwords do not match.
+    if expected_status == status.HTTP_400_BAD_REQUEST:
+        assert response.json() == {
+            "detail": [
+                {
+                    "loc": ["body", "verified_password"],
+                    "msg": "Passwords do not match.",
+                    "type": "value_error",
+                }
+            ]
+        }
+
+
+@pytest.mark.parametrize(
     ["user_uid", "expected_status"],
     [
         pytest.param(
