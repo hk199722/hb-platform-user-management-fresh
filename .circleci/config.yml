@@ -109,8 +109,6 @@ jobs:
     environment:
       GOOGLE_PROJECT_ID: << parameters.project_id >>
     parameters:
-      env:
-        type: string
       project_id:
         type: string
     steps:
