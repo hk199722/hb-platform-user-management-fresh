@@ -22,7 +22,10 @@ def create_gcp_user(
     user: User = Depends(user_check),
     db: DBSession = Depends(get_database),
 ):
-    return GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user, user=user)
+    gcp_user = GCPUserService(db).create_gcp_user(gcp_user=new_gcp_user, user=user)
+    MailerService(db).welcome_message(gcp_user_uid=gcp_user.uid)
+
+    return gcp_user
 
 
 @router.get("/{uid}", response_model=GCPUserSchema)
