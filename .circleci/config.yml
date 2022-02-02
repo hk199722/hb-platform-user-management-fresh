@@ -34,6 +34,7 @@ executors:
       POSTGRES_PASSWORD: password
       POSTGRES_HOST: localhost
       DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
+      ACCOUNTS_BASE_URL: https://accounts.staging.hummingbird.com
 
 
 commands:
@@ -72,6 +73,11 @@ jobs:
 
   test:
     executor: tests-runner
+    environment:
+      GOOGLE_PROJECT_ID: << parameters.project_id >>
+    parameters:
+      project_id:
+        type: string
     steps:
       - checkout
       - update-poetry
@@ -106,6 +112,11 @@ jobs:
 
   test-alembic-migrations:
     executor: tests-runner
+    environment:
+      GOOGLE_PROJECT_ID: << parameters.project_id >>
+    parameters:
+      project_id:
+        type: string
     steps:
       - checkout
       - update-poetry
@@ -199,9 +210,11 @@ workflows:
     jobs:
       - build
       - test-alembic-migrations:
+          project_id: hbt-staging
           requires:
             - build
       - test:
+          project_id: hbt-staging
           requires:
             - test-alembic-migrations
 

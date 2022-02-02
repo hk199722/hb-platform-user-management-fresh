@@ -4,7 +4,13 @@ from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
 from user_management.repositories.gcp_user import GCPUserRepository
-from user_management.schemas import GCPUserSchema, NewGCPUserSchema, UpdateGCPUserSchema
+from user_management.repositories.security_token import SecurityTokenRepository
+from user_management.schemas import (
+    CreateSecurityTokenSchema,
+    GCPUserSchema,
+    NewGCPUserSchema,
+    UpdateGCPUserSchema,
+)
 from user_management.services.auth import AuthService
 from user_management.services.gcp_identity import GCPIdentityPlatformService
 
@@ -13,10 +19,14 @@ class GCPUserService:
     def __init__(self, db: DBSession):
         self.auth_service = AuthService(db)
         self.gcp_user_repository = GCPUserRepository(db)
+        self.security_token_repository = SecurityTokenRepository(db)
         self.gcp_identity_service = GCPIdentityPlatformService()
 
     def create_gcp_user(self, gcp_user: NewGCPUserSchema, user: User) -> GCPUserSchema:
-        """Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform."""
+        """
+        Persists `GCPUser` in database and synchronizes new user with GCP Identity Platform. After
+        that, it sends an email to the user with a link to set up its HB Platform password.
+        """
         if not gcp_user.role:
             self.auth_service.check_staff_permission(request_user=user)
         else:
@@ -28,6 +38,12 @@ class GCPUserService:
 
         # Synchronize GCP Identity Platform.
         self.gcp_identity_service.sync_gcp_user(gcp_user=created_user)
+
+        # Create a one-time Security Token to be used to let the user set the password for the first
+        # time.
+        self.security_token_repository.create(
+            schema=CreateSecurityTokenSchema(gcp_user_uid=created_user.uid)
+        )
 
         return created_user
 
@@ -71,3 +87,11 @@ class GCPUserService:
         """
         self.auth_service.check_gcp_user_edit_allowance(request_user=user, uid=uid)
         self.gcp_user_repository.delete_client_user(gcp_user=uid, client=client_uid)
+
+    def set_user_password(self, uid: UUID4, token: UUID4, password: str) -> None:
+        """Sets up the `GCPUser` password in GCP-IP backend."""
+        self.security_token_repository.get(pk={"gcp_user_uid": uid, "uid": token})
+        self.gcp_identity_service.set_password(gcp_user_uid=uid, password=password)
+
+        # Delete the security token, since it has been used already.
+        self.security_token_repository.delete(pk={"gcp_user_uid": uid, "uid": token})

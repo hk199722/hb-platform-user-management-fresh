@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseSettings, DirectoryPath, PostgresDsn, SecretStr
+from pydantic import BaseSettings, DirectoryPath, HttpUrl, PostgresDsn, SecretStr
 from pydantic.schema import Pattern
 
 
@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     database_max_overflow: int = 10
     database_pool_recycle: int = 3600
 
+    # Platform services
+    accounts_base_url: HttpUrl
+
     # CORS middleware
     cors_allow_origins: Optional[Pattern]
 
@@ -24,7 +27,7 @@ class Settings(BaseSettings):
     gcp_request_timeout: int = 30
 
     # GCP Pub/Sub configuration
-    gcp_project: str
+    google_project_id: str
     topic_name: str = "mailing"
     message_limit: int = 500
     byte_limit: int = 2 * 1024 * 1024  # Max size in bytes of the total awaiting messages.

@@ -14,7 +14,8 @@ from firebase_admin.auth import (
 from firebase_admin.exceptions import InvalidArgumentError
 from sqlalchemy import func, select
 
-from user_management.models import Client, ClientUser, GCPUser, Role
+from user_management.core.config.settings import get_settings
+from user_management.models import Client, ClientUser, GCPUser, Role, SecurityToken
 from user_management.schemas import GCPUserSchema
 
 
@@ -88,7 +89,9 @@ from user_management.schemas import GCPUserSchema
     ],
 )
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+@patch("user_management.services.mailer.PublisherClient")
 def test_create_gcp_user(
+    mock_pubsub,
     mock_identity_platform,
     test_client,
     user_info,
@@ -101,6 +104,7 @@ def test_create_gcp_user(
     expected_status,
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_pubsub = mock_pubsub()
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
@@ -136,6 +140,23 @@ def test_create_gcp_user(
                 select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
             )
             assert client_user is not None
+
+        # Security Token created.
+        token = test_db_session.scalar(select(SecurityToken).filter_by(gcp_user_uid=gcp_user_uid))
+        assert token is not None
+
+        # Welcome email sent.
+        message = {
+            "message_type": "WELCOME",
+            "email": gcp_user.email,
+            "context": {
+                "full_name": gcp_user.name,
+                "link": f"{get_settings().accounts_base_url}/new-user/set-password/{gcp_user.uid}/{token.uid}",
+            },
+        }
+        mock_pubsub.publish.assert_called_with(
+            mock_pubsub.topic_path(), json.dumps(message).encode("utf-8")
+        )
 
 
 @pytest.mark.parametrize(
@@ -798,6 +819,88 @@ def test_delete_client_user(test_client, user_info, test_db_session, sql_factory
         )
         == 0
     )
+
+
+@pytest.mark.parametrize(
+    ["user_uid", "token_uid", "payload", "expected_status"],
+    [
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "95a78c35-ede7-4b8b-8c88-a3ce2c105406",
+            {"password": "testing", "verified_password": "testing"},
+            status.HTTP_204_NO_CONTENT,
+            id="Successful password creation",
+        ),
+        pytest.param(
+            "fe524b0f-3ee3-4856-b297-84f1a458f374",
+            "95a78c35-ede7-4b8b-8c88-a3ce2c105406",
+            {"password": "testing", "verified_password": "testing"},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong password creation request - Non existent user UID",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "3246b228-35f0-4a80-87f9-4b54bb51d699",
+            {"password": "testing", "verified_password": "testing"},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong password creation request - Non existent security token",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "95a78c35-ede7-4b8b-8c88-a3ce2c105406",
+            {"password": "testing", "verified_password": "DIFFERENT_PASSWORD"},
+            status.HTTP_400_BAD_REQUEST,
+            id="Wrong password creation request - Non existent security token",
+        ),
+    ],
+)
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_create_gcp_user_password(
+    mock_identity_platform,
+    test_client,
+    test_db_session,
+    sql_factory,
+    user_uid,
+    token_uid,
+    payload,
+    expected_status,
+):
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.security_token.create(uid="95a78c35-ede7-4b8b-8c88-a3ce2c105406", user=gcp_user)
+
+    response = test_client.post(
+        f"/api/v1/users/{user_uid}/create-password/{token_uid}",
+        json=payload,
+    )
+
+    assert response.status_code == expected_status
+
+    # Valid data submitted. Check up password creation and Security Token disposal.
+    if expected_status == status.HTTP_204_NO_CONTENT:
+        # Password creation triggered with the GCP-IP SDK function.
+        mock_identity_platform().set_password.assert_called_with(
+            gcp_user_uid=uuid.UUID(gcp_user.uid), password="testing"
+        )
+
+        # Security Token deleted from database, as it has been successfully used.
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(SecurityToken).filter_by(gcp_user_uid=gcp_user.uid)
+            )
+            == 0
+        )
+
+    # Invalid data submitted: passwords do not match.
+    if expected_status == status.HTTP_400_BAD_REQUEST:
+        assert response.json() == {
+            "detail": [
+                {
+                    "loc": ["body", "verified_password"],
+                    "msg": "Passwords do not match.",
+                    "type": "value_error",
+                }
+            ]
+        }
 
 
 @pytest.mark.parametrize(

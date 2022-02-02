@@ -5,7 +5,7 @@ import factory
 from factory import fuzzy
 from sqlalchemy.orm import Session
 
-from user_management.models import Client, ClientFarm, ClientUser, GCPUser, Role
+from user_management.models import Client, ClientFarm, ClientUser, GCPUser, Role, SecurityToken
 
 
 class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -65,6 +65,15 @@ class ClientFarmFactory(BaseModelFactory):
         sqlalchemy_session_persistence = "commit"
 
 
+class SecurityTokenFactory(BaseModelFactory):
+    uid = factory.Sequence(lambda n: uuid.uuid4())
+    user = factory.SubFactory(GCPUserFactory)
+
+    class Meta:
+        model = SecurityToken
+        sqlalchemy_session_persistence = "commit"
+
+
 class SQLModelFactory:
     """
     Implements an object that, when instantiated via its `initialize` method, will automatically
@@ -79,6 +88,7 @@ class SQLModelFactory:
     gcp_user = None
     client_farm = None
     client_user = None
+    security_token = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -90,4 +100,5 @@ class SQLModelFactory:
             gcp_user=GCPUserFactory.bind(session),
             client_farm=ClientFarmFactory.bind(session),
             client_user=ClientUserFactory.bind(session),
+            security_token=SecurityTokenFactory.bind(session),
         )
