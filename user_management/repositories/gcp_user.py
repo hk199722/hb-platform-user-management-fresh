@@ -1,7 +1,8 @@
 from typing import Iterable, List, Optional
 
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, EmailStr, UUID4
 from sqlalchemy import func, select
+from sqlalchemy.exc import NoResultFound
 
 from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
 from user_management.models import ClientUser, GCPUser, Role
@@ -50,6 +51,16 @@ class GCPUserRepository(AlchemyRepository):
 
         self._persist_changes(schema=schema)
         return ready_response
+
+    def get_from_email(self, email: EmailStr) -> GCPUserSchema:
+        try:
+            gcp_user = self.db.execute(select(self.model).filter_by(email=email)).scalars().one()
+        except NoResultFound as error:
+            raise ResourceNotFoundError(
+                context={"message": f"No user found for email {email}."}
+            ) from error
+
+        return self._response(gcp_user)
 
     def create(self, schema: BaseModel) -> Schema:
         """Overrides base `create` method to handle user roles creation for a given client"""

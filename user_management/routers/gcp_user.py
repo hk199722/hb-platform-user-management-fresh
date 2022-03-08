@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, Response, status
-from pydantic import UUID4
+from pydantic import EmailStr, UUID4
 
 from user_management.core.dependencies import DBSession, get_database, user_check, User
 from user_management.schemas import (
@@ -86,7 +86,7 @@ def create_gcp_user_password(
 
 
 @router.get(
-    "/{uid}/reset-password", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
+    "/{email}/reset-password", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
 )
-def reset_gcp_user_password(uid: UUID4, db: DBSession = Depends(get_database)):
-    MailerService(db).reset_password_message(gcp_user_uid=uid)
+def reset_gcp_user_password(email: EmailStr, db: DBSession = Depends(get_database)):
+    MailerService(db).reset_password_message(gcp_user_email=email)
