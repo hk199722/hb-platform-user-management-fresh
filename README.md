@@ -26,6 +26,9 @@ to set up for running the service in local are:
 - `DATABASE_URL`: The URI of your local database, e.g. `postgresql://user:password@localhost:5432/user_management`.
 - `GCP_CREDENTIALS`: The credentials of a [GCP Service Account](https://cloud.google.com/iam/docs/service-accounts)
   with permissions to operate with GCP Identity Platform.
+- `GOOGLE_PROJECT_ID`: The Google Cloud Project ID, can be `hbt-staging` or
+  `hummingbirdtech-production`. This is used to send GCP Pub/Sub messages through the Python SDK,
+  which requires it as one core function parameter.
 
 :warning: **Warning:** setting `GCP_CREDENTIALS` configuration value to a real Service Account will
 make your local service synchronize your local development data with the GCP project the Service
