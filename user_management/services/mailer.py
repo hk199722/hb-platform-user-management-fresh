@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from google.cloud.pubsub_v1 import PublisherClient
 from google.cloud.pubsub_v1.types import LimitExceededBehavior, PublisherOptions, PublishFlowControl
-from pydantic import UUID4
+from pydantic import EmailStr, UUID4
 
 from user_management.core.config.settings import get_settings
 from user_management.core.dependencies import DBSession
@@ -80,12 +80,12 @@ class MailerService:
             response,
         )
 
-    def reset_password_message(self, gcp_user_uid: UUID4) -> None:
+    def reset_password_message(self, gcp_user_email: EmailStr) -> None:
         """Sends a message to a GCP Pub/Sub queue when a registered user requests to reset the user
         password. The message will trigger an email to be sent to the user with a link to a platform
         screen to reset the password.
         """
-        gcp_user = self.gcp_user_repository.get(pk=gcp_user_uid)
+        gcp_user = self.gcp_user_repository.get_from_email(email=gcp_user_email)
         message = {
             "message_type": "PASSWORD_RESET",
             "email": gcp_user.email,
@@ -100,6 +100,6 @@ class MailerService:
         logger.info(
             "Reset password email sent to user %s (%s). Message ID: %s.",
             gcp_user.email,
-            gcp_user_uid,
+            gcp_user.uid,
             response,
         )

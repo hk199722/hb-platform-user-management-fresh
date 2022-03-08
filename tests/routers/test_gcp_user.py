@@ -907,12 +907,12 @@ def test_create_gcp_user_password(
     ["user_uid", "expected_status"],
     [
         pytest.param(
-            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            "john.doe@hummingbirdtech.com",
             status.HTTP_204_NO_CONTENT,
             id="Successful password reset link request",
         ),
         pytest.param(
-            "a0723fb5-6b0f-45ec-a131-6a6a1bd87741",
+            "non-existing-user@hummingbirdtech.com",
             status.HTTP_404_NOT_FOUND,
             id="Wrong password reset link request - Non existent user UID",
         ),
@@ -927,7 +927,7 @@ def test_reset_gcp_user_password(
     mock_pubsub = mock_pubsub()
     link = "http://hummingbirdtech.com/reset-link"
     mock_identity_platform.get_password_reset_link.return_value = link
-    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    gcp_user = sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
     response = test_client.get(f"/api/v1/users/{user_uid}/reset-password")
 
