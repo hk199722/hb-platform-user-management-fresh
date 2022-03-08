@@ -2,6 +2,7 @@ import base64
 import binascii
 import dataclasses
 import json
+import logging
 from typing import Dict, Generator, TypeVar
 
 from fastapi import Header
@@ -11,6 +12,7 @@ from sqlalchemy.orm import scoped_session, Session
 from user_management.core.database import db_session_factory
 from user_management.core.exceptions import AuthenticationError, AuthorizationError
 
+logger = logging.getLogger(__name__)
 
 DBSession = TypeVar("DBSession", scoped_session, Session)
 
@@ -63,6 +65,7 @@ class RequestUserCheck:
                 roles=user_info.get("roles", {}),
             )
         except (binascii.Error, json.JSONDecodeError, KeyError, UnicodeDecodeError) as error:
+            logger.exception("Invalid user information payload.")
             raise AuthenticationError({"message": "Invalid user information payload."}) from error
 
     def __call__(self, x_apigateway_api_userinfo: str = Header(None)) -> User:
