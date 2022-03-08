@@ -904,7 +904,7 @@ def test_create_gcp_user_password(
 
 
 @pytest.mark.parametrize(
-    ["user_uid", "expected_status"],
+    ["user_email", "expected_status"],
     [
         pytest.param(
             "john.doe@hummingbirdtech.com",
@@ -921,7 +921,7 @@ def test_create_gcp_user_password(
 @patch("user_management.services.mailer.GCPIdentityPlatformService")
 @patch("user_management.services.mailer.PublisherClient")
 def test_reset_gcp_user_password(
-    mock_pubsub, mock_identity_platform, test_client, sql_factory, user_uid, expected_status
+    mock_pubsub, mock_identity_platform, test_client, sql_factory, user_email, expected_status
 ):
     mock_identity_platform = mock_identity_platform()
     mock_pubsub = mock_pubsub()
@@ -929,7 +929,7 @@ def test_reset_gcp_user_password(
     mock_identity_platform.get_password_reset_link.return_value = link
     gcp_user = sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
-    response = test_client.get(f"/api/v1/users/{user_uid}/reset-password")
+    response = test_client.get(f"/api/v1/users/{user_email}/reset-password")
 
     assert response.status_code == expected_status
 
