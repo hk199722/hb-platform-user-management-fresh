@@ -65,7 +65,7 @@ class RequestUserCheck:
                 roles=user_info.get("roles", {}),
             )
         except (binascii.Error, json.JSONDecodeError, KeyError, UnicodeDecodeError) as error:
-            logger.exception("Invalid user information payload.")
+            logger.exception("Invalid user information payload: %s", x_apigateway_api_userinfo)
             raise AuthenticationError({"message": "Invalid user information payload."}) from error
 
     def __call__(self, x_apigateway_api_userinfo: str = Header(None)) -> User:
