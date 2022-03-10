@@ -98,14 +98,6 @@ class UpdateGCPUserSchema(BaseModel):
     )
 
 
-class ClientFarmSchema(BaseModel):
-    farm_uid: UUID4
-    client_uid: UUID4
-
-    class Config:
-        orm_mode = True
-
-
 class CreateSecurityTokenSchema(BaseModel):
     gcp_user_uid: UUID4
 
