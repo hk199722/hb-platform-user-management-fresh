@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, ForeignKey, Sequence, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
@@ -36,9 +36,37 @@ class Client(Base):
     name = Column(String(50), unique=True, nullable=False)
 
     users = relationship("ClientUser", back_populates="client", cascade="all, delete")
+    capabilities = relationship("ClientCapability", back_populates="client", cascade="all, delete")
 
     def __repr__(self):
         return f"<Client: uid={self.uid}, name={self.name}>"
+
+
+class Capability(Base):
+    __tablename__ = "capability"
+
+    id = Column(Integer, Sequence("capability_id_seq"), primary_key=True)
+    name = Column(String(50), nullable=False, unique=True)
+
+    clients = relationship("ClientCapability", back_populates="capability", cascade="all, delete")
+
+    def __repr__(self):
+        return f"<Capability: id={self.id}, name={self.name}>"
+
+
+class ClientCapability(Base):
+    __tablename__ = "client_capability"
+
+    client_uid = Column(ForeignKey("client.uid", ondelete="CASCADE"), primary_key=True)
+    capability_id = Column(ForeignKey("capability.id", ondelete="CASCADE"), primary_key=True)
+
+    capability = relationship("Capability", back_populates="clients")
+    client = relationship("Client", back_populates="capabilities")
+
+    def __repr__(self):
+        return (
+            f"<ClientCapability: client_uid={self.client_uid}, capability_id={self.capability_id}>"
+        )
 
 
 class GCPUser(Base):
