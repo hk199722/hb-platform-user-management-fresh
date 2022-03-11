@@ -120,3 +120,13 @@ class CreatePasswordSchema(BaseModel):
             raise ValueError("Passwords do not match.")
 
         return value
+
+
+class CapabilitySchema(BaseModel):
+    id: int
+    name: str
+
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
+
+    class Config:
+        orm_mode = True
