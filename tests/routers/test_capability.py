@@ -17,7 +17,7 @@ from user_management.models import Capability
         pytest.param("Tillage", status.HTTP_201_CREATED, id="Successful capability creation"),
     ],
 )
-def test_create_client(
+def test_create_capability(
     test_client, staff_user_info, test_db_session, sql_factory, capability_name, expected_status
 ):
     sql_factory.capability.create(name="Cover Crops")
@@ -33,3 +33,22 @@ def test_create_client(
         capability_id = response.json()["id"]
         capability = test_db_session.get(Capability, capability_id)
         assert capability.name == capability_name
+
+
+def test_get_capability_non_existing(test_client, user_info):
+    response = test_client.get(
+        "/api/v1/capabilities/9999999999",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_get_capability_success(test_client, user_info, sql_factory):
+    capability = sql_factory.capability.create()
+    response = test_client.get(
+        f"/api/v1/capabilities/{capability.id}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"id": capability.id, "name": capability.name}
