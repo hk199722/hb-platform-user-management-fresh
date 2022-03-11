@@ -3,8 +3,8 @@ from typing import List
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
-from user_management.repositories.gcp_user import GCPUserRepository
-from user_management.repositories.security_token import SecurityTokenRepository
+from user_management.repositories import GCPUserRepository
+from user_management.repositories import SecurityTokenRepository
 from user_management.schemas import (
     CreateSecurityTokenSchema,
     GCPUserSchema,

@@ -3,7 +3,7 @@ from typing import List
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
-from user_management.repositories.client import ClientRepository
+from user_management.repositories import ClientRepository
 from user_management.schemas import ClientSchema, NewNamedEntitySchema
 from user_management.services.auth import AuthService
 from user_management.services.gcp_identity import GCPIdentityPlatformService

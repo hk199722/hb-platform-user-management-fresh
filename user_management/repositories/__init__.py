@@ -1,0 +1,5 @@
+# pylint: disable=unused-import
+from user_management.repositories.capability import CapabilityRepository
+from user_management.repositories.client import ClientRepository
+from user_management.repositories.gcp_user import GCPUserRepository
+from user_management.repositories.security_token import SecurityTokenRepository

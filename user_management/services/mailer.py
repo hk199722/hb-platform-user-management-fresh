@@ -8,8 +8,8 @@ from pydantic import EmailStr, UUID4
 
 from user_management.core.config.settings import get_settings
 from user_management.core.dependencies import DBSession
-from user_management.repositories.gcp_user import GCPUserRepository
-from user_management.repositories.security_token import SecurityTokenRepository
+from user_management.repositories import GCPUserRepository
+from user_management.repositories import SecurityTokenRepository
 from user_management.services.gcp_identity import GCPIdentityPlatformService
 
 
