@@ -52,3 +52,21 @@ def test_get_capability_success(test_client, user_info, sql_factory):
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"id": capability.id, "name": capability.name}
+
+
+def test_get_capabilities(test_client, user_info, sql_factory):
+    capability_1 = sql_factory.capability.create(name="Cover Crops")
+    capability_2 = sql_factory.capability.create(name="Crop Type")
+    capability_3 = sql_factory.capability.create(name="Tillage")
+
+    response = test_client.get(
+        "/api/v1/capabilities",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    assert response.json() == [
+        {"id": capability_1.id, "name": capability_1.name},
+        {"id": capability_2.id, "name": capability_2.name},
+        {"id": capability_3.id, "name": capability_3.name},
+    ]
