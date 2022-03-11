@@ -36,7 +36,6 @@ class Client(Base):
     name = Column(String(50), unique=True, nullable=False)
 
     users = relationship("ClientUser", back_populates="client", cascade="all, delete")
-    farms = relationship("ClientFarm", back_populates="client", cascade="all, delete")
 
     def __repr__(self):
         return f"<Client: uid={self.uid}, name={self.name}>"
@@ -55,18 +54,6 @@ class GCPUser(Base):
 
     def __repr__(self):
         return f"<GCPUser: uid={self.uid}, email={self.email}>"
-
-
-class ClientFarm(Base):
-    __tablename__ = "client_farm"
-
-    farm_uid = Column(UUID(as_uuid=True), primary_key=True)
-    client_uid = Column(UUID(as_uuid=True), ForeignKey("client.uid", ondelete="CASCADE"))
-
-    client = relationship("Client", back_populates="farms")
-
-    def __repr__(self):
-        return f"<ClientFarm: farm_uid={self.farm_uid}, client_uid={self.client_uid}>"
 
 
 class SecurityToken(Base):

@@ -5,7 +5,7 @@ import factory
 from factory import fuzzy
 from sqlalchemy.orm import Session
 
-from user_management.models import Client, ClientFarm, ClientUser, GCPUser, Role, SecurityToken
+from user_management.models import Client, ClientUser, GCPUser, Role, SecurityToken
 
 
 class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -56,15 +56,6 @@ class ClientUserFactory(BaseModelFactory):
         sqlalchemy_session_persistence = "commit"
 
 
-class ClientFarmFactory(BaseModelFactory):
-    farm_uid = factory.Sequence(lambda n: uuid.uuid4())
-    client = factory.SubFactory(ClientFactory)
-
-    class Meta:
-        model = ClientFarm
-        sqlalchemy_session_persistence = "commit"
-
-
 class SecurityTokenFactory(BaseModelFactory):
     uid = factory.Sequence(lambda n: uuid.uuid4())
     user = factory.SubFactory(GCPUserFactory)
@@ -86,7 +77,6 @@ class SQLModelFactory:
 
     client = None
     gcp_user = None
-    client_farm = None
     client_user = None
     security_token = None
 
@@ -98,7 +88,6 @@ class SQLModelFactory:
         return cls(
             client=ClientFactory.bind(session),
             gcp_user=GCPUserFactory.bind(session),
-            client_farm=ClientFarmFactory.bind(session),
             client_user=ClientUserFactory.bind(session),
             security_token=SecurityTokenFactory.bind(session),
         )
