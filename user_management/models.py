@@ -36,6 +36,7 @@ class Client(Base):
     name = Column(String(50), unique=True, nullable=False)
 
     users = relationship("ClientUser", back_populates="client", cascade="all, delete")
+    capabilities = relationship("ClientCapability", back_populates="client", cascade="all, delete")
 
     def __repr__(self):
         return f"<Client: uid={self.uid}, name={self.name}>"
@@ -46,6 +47,8 @@ class Capability(Base):
 
     id = Column(Integer, Sequence("capability_id_seq"), primary_key=True)
     name = Column(String(50), nullable=False, unique=True)
+
+    clients = relationship("ClientCapability", back_populates="capability", cascade="all, delete")
 
     def __repr__(self):
         return f"<Capability: id={self.id}, name={self.name}>"
