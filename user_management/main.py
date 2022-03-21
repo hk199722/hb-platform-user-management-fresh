@@ -8,6 +8,7 @@ from starlette.exceptions import HTTPException
 from user_management.core.config.logging import logging_config
 from user_management.core.config.settings import get_settings
 from user_management.core.firebase import init_identity_platform_app
+from user_management.routers.capability import router as capabilities_router
 from user_management.routers.client import router as clients_router
 from user_management.routers.gcp_user import router as gcp_user_router
 
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     api_router = APIRouter()
     api_router.include_router(clients_router, prefix="/clients", tags=["Clients"])
     api_router.include_router(gcp_user_router, prefix="/users", tags=["Users"])
+    api_router.include_router(capabilities_router, prefix="/capabilities", tags=["Capabilities"])
 
     app.include_router(api_router, prefix="/api/v1")
 

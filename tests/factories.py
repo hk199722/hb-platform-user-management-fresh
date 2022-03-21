@@ -5,7 +5,7 @@ import factory
 from factory import fuzzy
 from sqlalchemy.orm import Session
 
-from user_management.models import Client, ClientUser, GCPUser, Role, SecurityToken
+from user_management.models import Capability, Client, ClientUser, GCPUser, Role, SecurityToken
 
 
 class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -65,17 +65,26 @@ class SecurityTokenFactory(BaseModelFactory):
         sqlalchemy_session_persistence = "commit"
 
 
+class CapabilityFactory(BaseModelFactory):
+    name = factory.Sequence(lambda n: f"Capability-{n}")
+
+    class Meta:
+        model = Capability
+        sqlalchemy_session_persistence = "commit"
+
+
 class SQLModelFactory:
     """
     Implements an object that, when instantiated via its `initialize` method, will automatically
     create attributes for any factory models "bound" to a session that we might pass to the class
     constructor.
 
-    Therefore this can be used as a Pytest fixture, so we can pass it to tests and invoke model
+    Therefore, this can be used as a Pytest fixture, so we can pass it to tests and invoke model
     factories from its attributes, just using Factory Boy API.
     """
 
     client = None
+    capability = None
     gcp_user = None
     client_user = None
     security_token = None
@@ -87,6 +96,7 @@ class SQLModelFactory:
     def initialize(cls, session: Session):
         return cls(
             client=ClientFactory.bind(session),
+            capability=CapabilityFactory.bind(session),
             gcp_user=GCPUserFactory.bind(session),
             client_user=ClientUserFactory.bind(session),
             security_token=SecurityTokenFactory.bind(session),
