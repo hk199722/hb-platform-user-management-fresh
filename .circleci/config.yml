@@ -114,6 +114,7 @@ jobs:
     executor: tests-runner
     environment:
       GOOGLE_PROJECT_ID: << parameters.project_id >>
+      GCP_API_KEY: "secret"
     parameters:
       project_id:
         type: string
