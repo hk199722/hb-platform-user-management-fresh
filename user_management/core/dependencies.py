@@ -60,7 +60,7 @@ class RequestUserCheck:
         try:
             user_info = json.loads(base64.b64decode(x_apigateway_api_userinfo + "="))
             return User(
-                uid=user_info["uid"],
+                uid=user_info["user_id"],
                 staff=user_info["staff"],
                 roles=user_info.get("roles", {}),
             )
