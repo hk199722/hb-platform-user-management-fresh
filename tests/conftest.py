@@ -252,7 +252,6 @@ def staff_user_info(sql_factory) -> Generator[RequestUser, None, None]:
             "identities": {"email": [gcp_user.email]},
             "sign_in_provider": "password",
         },
-        "uid": str(gcp_user.uid),
     }
 
     payload = base64.b64encode(json.dumps(staff_gcp_user_info).encode()).decode()
