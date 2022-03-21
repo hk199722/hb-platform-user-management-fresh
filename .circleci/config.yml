@@ -35,6 +35,7 @@ executors:
       POSTGRES_HOST: localhost
       DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
       ACCOUNTS_BASE_URL: https://accounts.staging.hummingbird.com
+      GCP_API_KEY: "secret"
 
 
 commands:
@@ -114,7 +115,6 @@ jobs:
     executor: tests-runner
     environment:
       GOOGLE_PROJECT_ID: << parameters.project_id >>
-      GCP_API_KEY: "secret"
     parameters:
       project_id:
         type: string
