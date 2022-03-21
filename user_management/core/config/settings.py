@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     cors_allow_origins: Optional[Pattern]
 
     # GCP Identity Platform
+    gcp_api_key: SecretStr
     gcp_credentials: Optional[SecretStr]
     gcp_request_timeout: int = 30
 
