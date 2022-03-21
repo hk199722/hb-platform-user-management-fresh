@@ -135,10 +135,3 @@ class CapabilitySchema(BaseModel):
 class LoginSchema(BaseModel):
     email: EmailStr
     password: SecretStr
-
-
-# class LoginResponseSchema(BaseModel):
-#     kind: str
-#     local_id: UUID4
-#     email: EmailStr
-#     display_name:
