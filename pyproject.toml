@@ -31,6 +31,7 @@ pylint = "^2.11.1"
 pytest = "^6.2.5"
 factory-boy = "^3.2.1"
 pytest-cov = "^3.0.0"
+types-requests = "^2.27.14"
 
 [tool.poetry.scripts]
 user_management = "user_management.main:create_app"

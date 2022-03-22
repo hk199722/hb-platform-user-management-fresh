@@ -1,8 +1,7 @@
 import logging
 from typing import Dict, List, TypedDict, Union
 
-from pydantic import UUID4
-
+from fastapi import status
 from firebase_admin.auth import (
     create_user,
     delete_user,
@@ -16,7 +15,12 @@ from firebase_admin.auth import (
     UserNotFoundError,
 )
 from firebase_admin.exceptions import FirebaseError, InvalidArgumentError, PermissionDeniedError
+from pydantic import EmailStr, UUID4
+from requests import Session
+
+from user_management.core.config.settings import get_settings
 from user_management.core.exceptions import (
+    AuthenticationError,
     RemoteServiceError,
     RequestError,
     ResourceConflictError,
@@ -33,6 +37,10 @@ Claims = TypedDict("Claims", {"roles": Dict[str, str], "staff": bool}, total=Fal
 
 class GCPIdentityPlatformService:
     """Service implementation to communicate and synchronize data with GCP Identity Platform."""
+
+    def __init__(self):
+        self.api_key = get_settings().gcp_api_key.get_secret_value()
+        self.api_session = Session()
 
     @staticmethod
     def _handle_gcp_exception(error: Exception, gcp_user: Union[GCPUserSchema, UUID4]) -> None:
@@ -139,3 +147,33 @@ class GCPIdentityPlatformService:
             self._handle_gcp_exception(error, gcp_user_uid)
 
         logger.info("User %s password has been successfully set up.", gcp_user_uid)
+
+    async def login_gcp_user(self, email: EmailStr, password: str):
+        """
+        Performs a request to GCP Identity Platform REST API to sign in a user using its email and
+        password.
+
+        When submitting login info to GCP-IP, we handle 3 types of situations:
+        - Successful authentication by the user (should be the most common case).
+        - Invalid credentials submitted by the user, login denied. GCP-IP returns a `400` error for
+          this, rather than a 401 error (which should be the correct thing).
+        - Invalid GCP API key, which is a User Management Service misconfiguration. This is returned
+          as a `500` error with the app exception `RemoteServiceError` and an informative message.
+          This should never happen, but if it does and the users are seeing this when trying to log
+          in, the problem is immediately identified.
+
+        Other possible errors are mostly undocumented in GCP.
+        """
+        response = self.api_session.post(
+            f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={self.api_key}",
+            data={"email": email, "password": password, "returnSecureToken": True},
+        )
+
+        if response.status_code == status.HTTP_400_BAD_REQUEST:
+            message = response.json()
+            if message.get("error", {}).get("status") == "INVALID_ARGUMENT":
+                raise RemoteServiceError(context={"message": "Service unavailable."})
+
+            raise AuthenticationError(context={"message": "Invalid credentials."})
+
+        return response.json()

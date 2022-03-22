@@ -130,3 +130,8 @@ class CapabilitySchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: SecretStr
