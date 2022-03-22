@@ -3,7 +3,7 @@ from typing import List, Optional
 from user_management.core.dependencies import DBSession
 from user_management.repositories import CapabilityRepository
 from user_management.repositories.base import Order
-from user_management.schemas import CapabilitySchema, NewNamedEntitySchema
+from user_management.schemas import CapabilitySchema, ClientCapabilitySchema, NewNamedEntitySchema
 
 
 class CapabilityService:
@@ -20,3 +20,8 @@ class CapabilityService:
         self, order_by: Optional[Order] = Order.asc("name")
     ) -> List[CapabilitySchema]:
         return self.capability_repository.list(order_by=order_by)
+
+    def enable_capability(self, client_capability: ClientCapabilitySchema) -> None:
+        return self.capability_repository.assign_client_capability(
+            client_capability=client_capability
+        )

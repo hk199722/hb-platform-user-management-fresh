@@ -132,6 +132,14 @@ class CapabilitySchema(BaseModel):
         orm_mode = True
 
 
+class ClientCapabilitySchema(BaseModel):
+    client_uid: UUID4
+    capability_id: int
+
+    class Config:
+        orm_mode = True
+
+
 class LoginSchema(BaseModel):
     email: EmailStr
     password: SecretStr
