@@ -45,3 +45,12 @@ def enable_capability(
     db: DBSession = Depends(get_database),
 ):
     return CapabilityService(db).enable_capability(client_capability=client_capability)
+
+
+@router.post("/disable", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+def disable_capability(
+    client_capability: ClientCapabilitySchema,
+    user: User = Depends(staff_check),  # pylint: disable=unused-argument
+    db: DBSession = Depends(get_database),
+):
+    return CapabilityService(db).disable_capability(client_capability=client_capability)

@@ -22,6 +22,11 @@ class CapabilityService:
         return self.capability_repository.list(order_by=order_by)
 
     def enable_capability(self, client_capability: ClientCapabilitySchema) -> None:
-        return self.capability_repository.assign_client_capability(
+        return self.capability_repository.create_client_capability(
+            client_capability=client_capability
+        )
+
+    def disable_capability(self, client_capability: ClientCapabilitySchema) -> None:
+        return self.capability_repository.remove_client_capability(
             client_capability=client_capability
         )
