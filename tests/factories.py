@@ -5,7 +5,15 @@ import factory
 from factory import fuzzy
 from sqlalchemy.orm import Session
 
-from user_management.models import Capability, Client, ClientUser, GCPUser, Role, SecurityToken
+from user_management.models import (
+    Capability,
+    Client,
+    ClientCapability,
+    ClientUser,
+    GCPUser,
+    Role,
+    SecurityToken,
+)
 
 
 class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -73,6 +81,15 @@ class CapabilityFactory(BaseModelFactory):
         sqlalchemy_session_persistence = "commit"
 
 
+class ClientCapabilityFactory(BaseModelFactory):
+    capability = factory.SubFactory(CapabilityFactory)
+    client = factory.SubFactory(ClientFactory)
+
+    class Meta:
+        model = ClientCapability
+        sqlalchemy_session_persistence = "commit"
+
+
 class SQLModelFactory:
     """
     Implements an object that, when instantiated via its `initialize` method, will automatically
@@ -83,10 +100,11 @@ class SQLModelFactory:
     factories from its attributes, just using Factory Boy API.
     """
 
-    client = None
     capability = None
-    gcp_user = None
+    client = None
+    client_capability = None
     client_user = None
+    gcp_user = None
     security_token = None
 
     def __init__(self, **kwargs):
@@ -97,6 +115,7 @@ class SQLModelFactory:
         return cls(
             client=ClientFactory.bind(session),
             capability=CapabilityFactory.bind(session),
+            client_capability=ClientCapabilityFactory.bind(session),
             gcp_user=GCPUserFactory.bind(session),
             client_user=ClientUserFactory.bind(session),
             security_token=SecurityTokenFactory.bind(session),
