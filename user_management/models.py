@@ -94,3 +94,15 @@ class SecurityToken(Base):
     created = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("GCPUser", backref=backref("security_token", uselist=False))
+
+
+class ClientAPIToken(Base):
+    __tablename__ = "client_api_token"
+
+    client_uid = Column(ForeignKey("client.uid", ondelete="CASCADE"), primary_key=True)
+    token = Column(String(128), nullable=False, unique=True)
+
+    client = relationship("Client", back_populates="capabilities")
+
+    def __repr__(self):
+        return f"<ClientAPIToken: client_uid={self.client_uid}>"
