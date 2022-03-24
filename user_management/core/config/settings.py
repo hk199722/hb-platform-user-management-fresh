@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     message_limit: int = 500
     byte_limit: int = 2 * 1024 * 1024  # Max size in bytes of the total awaiting messages.
 
+    # Sentry
+    sentry_dsn: Optional[HttpUrl]
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
