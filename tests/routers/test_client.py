@@ -281,7 +281,7 @@ def test_generate_api_token(
             )
             == 1
         )
-    elif response.status_code == status.HTTP_400_BAD_REQUEST:
+    elif response.status_code == status.HTTP_403_FORBIDDEN:
         # Check that the token was not created.
         assert (
             test_db_session.scalar(
@@ -289,7 +289,3 @@ def test_generate_api_token(
             )
             == 0
         )
-        assert response.json() == {
-            "app_exception": "RequestError",
-            "context": {"message": "Invalid Client UUID."},
-        }
