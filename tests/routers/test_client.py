@@ -5,7 +5,7 @@ import pytest
 from fastapi import status
 from sqlalchemy import func, select
 
-from user_management.models import Client, GCPUser, ClientAPIToken, ClientUser
+from user_management.models import Client, GCPUser, ClientAPIToken, ClientUser, Role
 
 
 @pytest.mark.parametrize(
@@ -244,7 +244,7 @@ def test_update_client(
         ),
         pytest.param(
             "2299be00-914a-4efa-96db-0892d9059138",
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_403_FORBIDDEN,
             id="Wrong API token generation - Client does not exist",
         ),
     ],
@@ -259,7 +259,12 @@ def test_generate_api_token(
 ):
     # Generate a new Client, a new token, and make the user `SUPERUSER` for that client, so it can
     # re-create the token.
-    sql_factory.client_api_token.create(client__uid="9a62826f-73b5-45a1-a709-8e983469afee")
+    client_api_token = sql_factory.client_api_token.create(
+        client__uid="9a62826f-73b5-45a1-a709-8e983469afee"
+    )
+    sql_factory.client_user.create(
+        user=user_info.user, client=client_api_token.client, role=Role.SUPERUSER.value
+    )
 
     response = test_client.get(
         f"/api/v1/clients/{client_uid}/api-token",

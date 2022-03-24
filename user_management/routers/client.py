@@ -52,7 +52,7 @@ def delete_client(
 @router.get("/{uid}/api-token", response_model=ClientAPITokenSchema)
 def generate_api_token(
     uid: UUID4,
-    user: User = Depends(user_check),  # pylint: disable=unused-argument
+    user: User = Depends(user_check),
     db: DBSession = Depends(get_database),
 ):
-    return ClientService(db).generate_api_token(uid=uid)
+    return ClientService(db).generate_api_token(uid=uid, user=user)

@@ -40,5 +40,6 @@ class ClientService:
         self.gcp_identity_service.remove_bulk_gcp_users(uids=deleted_users)
         return self.client_repository.delete(pk=uid)
 
-    def generate_api_token(self, uid: UUID4) -> ClientAPITokenSchema:
+    def generate_api_token(self, uid: UUID4, user: User) -> ClientAPITokenSchema:
+        self.auth_service.check_client_allowance(request_user=user, client_uid=uid)
         return self.client_repository.generate_api_token(uid=uid)
