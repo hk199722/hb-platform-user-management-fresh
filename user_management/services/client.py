@@ -19,7 +19,7 @@ class ClientService:
         return self.client_repository.create(schema=client)
 
     def get_client(self, uid: UUID4, user: User) -> ClientSchema:
-        self.auth_service.check_client_member(request_user=user, client=uid)
+        self.auth_service.check_client_member(request_user=user, client_uid=uid)
         return self.client_repository.get(pk=uid)
 
     def list_clients(self, user: User) -> List[ClientSchema]:

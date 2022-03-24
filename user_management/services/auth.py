@@ -101,7 +101,7 @@ class AuthService:
                     }
                 )
 
-    def check_client_allowance(self, request_user: User, client: UUID4) -> None:
+    def check_client_allowance(self, request_user: User, client_uid: UUID4) -> None:
         """Checks if the given `request_user` does have permissions to perform changes related to
         `client`, this is, if it is a `Role.SUPERUSER` within that client.
         """
@@ -109,15 +109,15 @@ class AuthService:
             return None
 
         superuser = self.gcp_user_repository.get_superuser_role(
-            gcp_user_uid=request_user.uid, client_uid=client
+            gcp_user_uid=request_user.uid, client_uid=client_uid
         )
         if not superuser:
             raise AuthorizationError()
 
-    def check_client_member(self, request_user: User, client: UUID4) -> None:
+    def check_client_member(self, request_user: User, client_uid: UUID4) -> None:
         """Checks if the given `request_user` does have permissions to read `client` data."""
         if request_user.staff:
             return None
 
-        if str(client) not in request_user.roles.keys():
+        if str(client_uid) not in request_user.roles.keys():
             raise ResourceNotFoundError()
