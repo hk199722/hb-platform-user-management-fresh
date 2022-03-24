@@ -143,3 +143,8 @@ class ClientCapabilitySchema(BaseModel):
 class LoginSchema(BaseModel):
     email: EmailStr
     password: SecretStr
+
+
+class ClientAPITokenSchema(BaseModel):
+    client_uid: UUID4
+    token: str

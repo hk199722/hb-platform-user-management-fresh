@@ -4,7 +4,7 @@ from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
 from user_management.repositories import ClientRepository
-from user_management.schemas import ClientSchema, NewNamedEntitySchema
+from user_management.schemas import ClientAPITokenSchema, ClientSchema, NewNamedEntitySchema
 from user_management.services.auth import AuthService
 from user_management.services.gcp_identity import GCPIdentityPlatformService
 
@@ -39,3 +39,6 @@ class ClientService:
         deleted_users = self.client_repository.delete_client_only_users(uid=uid)
         self.gcp_identity_service.remove_bulk_gcp_users(uids=deleted_users)
         return self.client_repository.delete(pk=uid)
+
+    def generate_api_token(self, uid: UUID4) -> ClientAPITokenSchema:
+        return self.client_repository.generate_api_token(uid=uid)
