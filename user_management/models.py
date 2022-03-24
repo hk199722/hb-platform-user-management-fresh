@@ -35,8 +35,11 @@ class Client(Base):
     uid = Column(UUID(as_uuid=True), server_default=func.uuid_generate_v4(), primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
 
-    users = relationship("ClientUser", back_populates="client", cascade="all, delete")
     capabilities = relationship("ClientCapability", back_populates="client", cascade="all, delete")
+    users = relationship("ClientUser", back_populates="client", cascade="all, delete")
+    api_token = relationship(
+        "ClientAPIToken", back_populates="client", uselist=False, cascade="all, delete"
+    )
 
     def __repr__(self):
         return f"<Client: uid={self.uid}, name={self.name}>"
@@ -102,7 +105,7 @@ class ClientAPIToken(Base):
     client_uid = Column(ForeignKey("client.uid", ondelete="CASCADE"), primary_key=True)
     token = Column(String(128), nullable=False, unique=True)
 
-    client = relationship("Client", back_populates="capabilities")
+    client = relationship("Client", back_populates="api_token")
 
     def __repr__(self):
         return f"<ClientAPIToken: client_uid={self.client_uid}>"
