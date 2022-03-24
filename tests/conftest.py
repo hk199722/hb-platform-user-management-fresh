@@ -188,8 +188,12 @@ def user_info(sql_factory) -> Generator[RequestUser, None, None]:
     convenience.
     """
     gcp_user = sql_factory.gcp_user.create(name="Request User")
-    client_user_1 = sql_factory.client_user.create(user=gcp_user, role=Role.SUPERUSER)
-    client_user_2 = sql_factory.client_user.create(user=gcp_user, role=Role.NORMAL_USER)
+    client_user_1 = sql_factory.client_user.create(
+        user=gcp_user, role=Role.SUPERUSER, client__uid="6aa2701f-c2ce-4140-9d52-7a539e97790d"
+    )
+    client_user_2 = sql_factory.client_user.create(
+        user=gcp_user, role=Role.NORMAL_USER, client_uid="52ae9edf-9a9d-4345-81b4-878478afc8af"
+    )
     timestamp = int(time())
 
     gcp_user_info = {
