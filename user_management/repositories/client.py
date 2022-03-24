@@ -77,9 +77,7 @@ class ClientRepository(AlchemyRepository):
                 # The Client already had an API token, so this request will delete the existing and
                 # re-generate a new one.
                 self.db.rollback()
-                existing_token = self.db.get(ClientAPIToken, uid)
-                self.db.delete(existing_token)
-                self.db.commit()
+                self.db.execute(delete(ClientAPIToken).where(ClientAPIToken.client_uid == uid))
                 return self.generate_api_token(uid=uid)
 
             raise error from None
