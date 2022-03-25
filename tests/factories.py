@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from user_management.models import (
     Capability,
     Client,
+    ClientAPIToken,
     ClientCapability,
     ClientUser,
     GCPUser,
@@ -90,6 +91,15 @@ class ClientCapabilityFactory(BaseModelFactory):
         sqlalchemy_session_persistence = "commit"
 
 
+class ClientAPITokenFactory(BaseModelFactory):
+    client = factory.SubFactory(ClientFactory)
+    token = factory.fuzzy.FuzzyText(length=40)
+
+    class Meta:
+        model = ClientAPIToken
+        sqlalchemy_session_persistence = "commit"
+
+
 class SQLModelFactory:
     """
     Implements an object that, when instantiated via its `initialize` method, will automatically
@@ -102,6 +112,7 @@ class SQLModelFactory:
 
     capability = None
     client = None
+    client_api_token = None
     client_capability = None
     client_user = None
     gcp_user = None
@@ -115,6 +126,7 @@ class SQLModelFactory:
         return cls(
             client=ClientFactory.bind(session),
             capability=CapabilityFactory.bind(session),
+            client_api_token=ClientAPITokenFactory.bind(session),
             client_capability=ClientCapabilityFactory.bind(session),
             gcp_user=GCPUserFactory.bind(session),
             client_user=ClientUserFactory.bind(session),

@@ -5,7 +5,7 @@ import pytest
 from fastapi import status
 from sqlalchemy import func, select
 
-from user_management.models import Client, GCPUser, ClientUser
+from user_management.models import Client, GCPUser, ClientAPIToken, ClientUser, Role
 
 
 @pytest.mark.parametrize(
@@ -227,3 +227,65 @@ def test_update_client(
 
         modified_client = test_db_session.get(Client, client_uid)
         assert modified_client.name == new_name
+
+
+@pytest.mark.parametrize(
+    ["client_uid", "expected_status"],
+    [
+        pytest.param(
+            "6aa2701f-c2ce-4140-9d52-7a539e97790d",
+            status.HTTP_200_OK,
+            id="Successful API token generation",
+        ),
+        pytest.param(
+            "9a62826f-73b5-45a1-a709-8e983469afee",
+            status.HTTP_200_OK,
+            id="Successful API token re-generation",
+        ),
+        pytest.param(
+            "2299be00-914a-4efa-96db-0892d9059138",
+            status.HTTP_403_FORBIDDEN,
+            id="Wrong API token generation - Client does not exist",
+        ),
+    ],
+)
+def test_generate_api_token(
+    test_client,
+    user_info,
+    sql_factory,
+    test_db_session,
+    client_uid,
+    expected_status,
+):
+    # Generate a new Client, a new token, and make the user `SUPERUSER` for that client, so it can
+    # re-create the token.
+    client_api_token = sql_factory.client_api_token.create(
+        client__uid="9a62826f-73b5-45a1-a709-8e983469afee"
+    )
+    sql_factory.client_user.create(
+        user=user_info.user, client=client_api_token.client, role=Role.SUPERUSER.value
+    )
+
+    response = test_client.get(
+        f"/api/v1/clients/{client_uid}/api-token",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == expected_status, response.json()
+
+    if response.status_code == status.HTTP_200_OK:
+        # Check that the `ClientAPIToken` was properly (re)created.
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(ClientAPIToken).filter_by(client_uid=client_uid)
+            )
+            == 1
+        )
+    elif response.status_code == status.HTTP_403_FORBIDDEN:
+        # Check that the token was not created.
+        assert (
+            test_db_session.scalar(
+                select(func.count()).select_from(ClientAPIToken).filter_by(client_uid=client_uid)
+            )
+            == 0
+        )

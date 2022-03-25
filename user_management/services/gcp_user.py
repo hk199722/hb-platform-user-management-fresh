@@ -31,7 +31,7 @@ class GCPUserService:
             self.auth_service.check_staff_permission(request_user=user)
         else:
             self.auth_service.check_client_allowance(
-                request_user=user, client=gcp_user.role.client_uid
+                request_user=user, client_uid=gcp_user.role.client_uid
             )
 
         created_user: GCPUserSchema = self.gcp_user_repository.create(schema=gcp_user)

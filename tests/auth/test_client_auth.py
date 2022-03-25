@@ -73,3 +73,39 @@ def test_delete_client_staff(test_client, staff_user_info, sql_factory):
     )
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+def test_generate_api_token_unauthorized(test_client, user_info):
+    """Users cannot generate API tokens for clients they don't belong to."""
+    response = test_client.get(
+        "/api/v1/clients/2299be00-914a-4efa-96db-0892d9059138/api-token",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+
+
+def test_generate_api_token_staff(test_client, staff_user_info, sql_factory):
+    """Staff users can generate tokens for any Client, with no restrictions."""
+    client = sql_factory.client.create()
+
+    response = test_client.get(
+        f"/api/v1/clients/{client.uid}/api-token",
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+def test_generate_api_token_staff_does_not_exist(test_client, staff_user_info):
+    """Test backend response when a Staff user tries to generate a token for a non-existing client."""
+    response = test_client.get(
+        "/api/v1/clients/2299be00-914a-4efa-96db-0892d9059138/api-token",
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.json()
+    assert response.json() == {
+        "app_exception": "RequestError",
+        "context": {"message": "Invalid Client UUID."},
+    }
