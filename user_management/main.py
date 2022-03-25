@@ -1,8 +1,12 @@
 import logging.config
 
+import sentry_sdk
 from fastapi import APIRouter, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from sentry_sdk.integrations.dedupe import DedupeIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 from starlette.exceptions import HTTPException
 
 from user_management.core.config.logging import logging_config
@@ -24,13 +28,36 @@ def create_app() -> FastAPI:
     Usage with Uvicorn:
 
         uvicorn --factory user_management.main:create_app --reload
+
+    Usage with Gunicorn:
+
+        user_management.main:create_app \
+            --bind=0.0.0.0:8000 \
+            --config python:user_management.core.config.gunicorn \
     """
     settings = get_settings()
+
+    # Sentry SDK must be initialized as early as possible.
+    sentry_sdk.init(  # pylint: disable=abstract-class-instantiated
+        dsn=settings.sentry_dsn,
+        # Disable Python log events in Sentry. We only want to send the unhandled exceptions/errors.
+        integrations=[LoggingIntegration(event_level=None), DedupeIntegration()],
+        environment=settings.google_project_id,
+        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+        # Otherwise, implement a `traces_sampler` function to customize transaction tracing
+        # behaviour.
+        # For more information: https://docs.sentry.io/platforms/python/configuration/sampling/
+        traces_sample_rate=0.15,
+        release=settings.release,
+    )
 
     init_identity_platform_app()
 
     # Initialize FastAPI app.
     app = FastAPI(title="Users Management")
+
+    # Initialize middlewares.
+    app.add_middleware(SentryAsgiMiddleware)
 
     if settings.cors_allow_origins:
         app.add_middleware(
@@ -41,6 +68,7 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    # Backend exception handling.
     from user_management.core.exceptions import (
         app_exception_handler,
         AppExceptionCase,
@@ -60,6 +88,7 @@ def create_app() -> FastAPI:
     async def custom_app_exception_handler(request, e):
         return await app_exception_handler(request, e)
 
+    # Routes configuration.
     api_router = APIRouter()
     api_router.include_router(capabilities_router, prefix="/capabilities", tags=["Capabilities"])
     api_router.include_router(clients_router, prefix="/clients", tags=["Clients"])

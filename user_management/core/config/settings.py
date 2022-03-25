@@ -8,6 +8,7 @@ from pydantic.schema import Pattern
 
 class Settings(BaseSettings):
     debug: bool = False
+    google_project_id: str
     project_root: DirectoryPath = Path(__file__).resolve().parent.parent.parent.parent
 
     # Database
@@ -28,10 +29,13 @@ class Settings(BaseSettings):
     gcp_request_timeout: int = 30
 
     # GCP Pub/Sub configuration
-    google_project_id: str
     topic_name: str = "mailing"
     message_limit: int = 500
     byte_limit: int = 2 * 1024 * 1024  # Max size in bytes of the total awaiting messages.
+
+    # Sentry
+    sentry_dsn: Optional[HttpUrl]
+    release: Optional[str]
 
     class Config:
         env_file = ".env"
