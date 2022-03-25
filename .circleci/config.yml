@@ -183,6 +183,9 @@ jobs:
     executor: cloud-sdk
     environment:
       GOOGLE_PROJECT_ID: << parameters.project_id >>
+      SENTRY_ORG: hummingbird-technologies
+      SENTRY_PROJECT: user-management
+      SENTRY_ENVIRONMENT: << parameters.project_id >>
     parameters:
       env:
         type: string
@@ -203,6 +206,14 @@ jobs:
               --allow-unauthenticated \
               --image ${IMAGE_NAME}:<< parameters.env >>
           name: Deploy to Google Cloud Run
+      - run:
+          command: |
+            curl -sL https://sentry.io/get-cli/ | bash
+            export SENTRY_RELEASE=$(sentry-cli releases propose-version)
+            sentry-cli releases new -p $SENTRY_PROJECT $SENTRY_RELEASE
+            sentry-cli releases set-commits $SENTRY_RELEASE --auto
+            sentry-cli releases finalize $SENTRY_RELEASE
+            sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_ENVIRONMENT
 
 
 workflows:
