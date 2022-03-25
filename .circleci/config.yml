@@ -61,7 +61,7 @@ jobs:
           pkg-manager: poetry
           args: -vvv
       - run: poetry build
-      - run: docker build --ssh default --progress=plain -t $IMAGE_NAME:latest .
+      - run: docker build --build-arg RELEASE_COMMIT=$CIRCLE_SHA1 --ssh default --progress=plain -t $IMAGE_NAME:latest .
       - run: docker save -o image.tar $IMAGE_NAME
       - persist_to_workspace:
           root: .
@@ -70,7 +70,6 @@ jobs:
     environment:
       IMAGE_NAME: eu.gcr.io/hummingbird-technologies/platform/hb-platform-user-management
       DOCKER_BUILDKIT: 1
-      GIT_COMMIT: $CIRCLE_SHA1
 
   test:
     executor: tests-runner

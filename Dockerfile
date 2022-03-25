@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM python:3.10-slim-buster
 
+ARG RELEASE_COMMIT
+ENV RELEASE=$RELEASE_COMMIT
+
 ENV PORT 80
 EXPOSE $PORT
 

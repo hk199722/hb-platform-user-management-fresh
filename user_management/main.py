@@ -42,13 +42,13 @@ def create_app() -> FastAPI:
         dsn=settings.sentry_dsn,
         # Disable Python log events in Sentry. We only want to send the unhandled exceptions/errors.
         integrations=[LoggingIntegration(event_level=None), DedupeIntegration()],
-        # environment=settings.ENVIRONMENT,
+        environment=settings.google_project_id,
         # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
         # Otherwise, implement a `traces_sampler` function to customize transaction tracing
         # behaviour.
         # For more information: https://docs.sentry.io/platforms/python/configuration/sampling/
         traces_sample_rate=0.15,
-        # release=settings.RELEASE,
+        release=settings.release,
     )
 
     init_identity_platform_app()
