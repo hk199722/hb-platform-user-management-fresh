@@ -148,3 +148,7 @@ class LoginSchema(BaseModel):
 class ClientAPITokenSchema(BaseModel):
     client_uid: UUID4
     token: str
+
+
+class SuccessfulAPIToken(BaseModel):
+    client_uid: UUID4

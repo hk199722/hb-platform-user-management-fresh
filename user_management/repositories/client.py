@@ -11,11 +11,11 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from user_management.core.dependencies import User
-from user_management.core.exceptions import RequestError
+from user_management.core.exceptions import AuthenticationError, RequestError
 from user_management.core.security import pwd_context
 from user_management.models import Client, ClientAPIToken, ClientUser, GCPUser
 from user_management.repositories.base import AlchemyRepository, Order, Schema
-from user_management.schemas import ClientAPITokenSchema, ClientSchema
+from user_management.schemas import ClientAPITokenSchema, ClientSchema, SuccessfulAPIToken
 
 
 class ClientRepository(AlchemyRepository):
@@ -83,3 +83,13 @@ class ClientRepository(AlchemyRepository):
             raise error from None
 
         return ClientAPITokenSchema(client_uid=uid, token=token)
+
+    def check_api_token(self, client_uid: UUID4, token: str) -> SuccessfulAPIToken:
+        """Given a Client UUID and its API token, it checks if it really is the valid token for the
+        claiming client.
+        """
+        client_api_token = self.db.get(ClientAPIToken, client_uid)
+        if not client_api_token or not pwd_context.verify(token, client_api_token.token):
+            raise AuthenticationError(context={"message": "Invalid API token."})
+
+        return SuccessfulAPIToken(client_uid=client_uid)
