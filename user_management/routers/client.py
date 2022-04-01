@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, Response, status
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database, staff_check, User, user_check
-from user_management.schemas import ClientAPITokenSchema, ClientSchema, NewNamedEntitySchema
+from user_management.schemas import (
+    ClientAPITokenSchema,
+    ClientSchema,
+    NewNamedEntitySchema,
+    SuccessfulAPIToken,
+)
 from user_management.services.client import ClientService
 
 
@@ -56,3 +61,11 @@ def generate_api_token(
     db: DBSession = Depends(get_database),
 ):
     return ClientService(db).generate_api_token(uid=uid, user=user)
+
+
+@router.post("/api-token/verify", response_model=SuccessfulAPIToken)
+def verify_api_token(
+    payload: ClientAPITokenSchema,
+    db: DBSession = Depends(get_database),
+):
+    return ClientService(db).verify_api_token(payload=payload)

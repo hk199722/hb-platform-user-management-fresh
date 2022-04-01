@@ -4,7 +4,12 @@ from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
 from user_management.repositories import ClientRepository
-from user_management.schemas import ClientAPITokenSchema, ClientSchema, NewNamedEntitySchema
+from user_management.schemas import (
+    ClientAPITokenSchema,
+    ClientSchema,
+    NewNamedEntitySchema,
+    SuccessfulAPIToken,
+)
 from user_management.services.auth import AuthService
 from user_management.services.gcp_identity import GCPIdentityPlatformService
 
@@ -43,3 +48,6 @@ class ClientService:
     def generate_api_token(self, uid: UUID4, user: User) -> ClientAPITokenSchema:
         self.auth_service.check_client_allowance(request_user=user, client_uid=uid)
         return self.client_repository.generate_api_token(uid=uid)
+
+    def verify_api_token(self, payload: ClientAPITokenSchema) -> SuccessfulAPIToken:
+        return self.client_repository.check_api_token(**payload.dict())
