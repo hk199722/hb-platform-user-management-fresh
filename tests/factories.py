@@ -5,6 +5,7 @@ import factory
 from factory import fuzzy
 from sqlalchemy.orm import Session
 
+from user_management.core.security import pwd_context
 from user_management.models import (
     Capability,
     Client,
@@ -98,6 +99,11 @@ class ClientAPITokenFactory(BaseModelFactory):
     class Meta:
         model = ClientAPIToken
         sqlalchemy_session_persistence = "commit"
+
+    @classmethod
+    def _adjust_kwargs(cls, **kwargs):
+        kwargs["token"] = pwd_context.hash(kwargs["token"])
+        return kwargs
 
 
 class SQLModelFactory:
