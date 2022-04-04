@@ -8,14 +8,14 @@ from psycopg2.errors import (  # pylint: disable=no-name-in-module
 )
 from pydantic import UUID4
 from sqlalchemy import delete, func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from user_management.core.dependencies import User
 from user_management.core.exceptions import AuthenticationError, RequestError
 from user_management.core.security import pwd_context
 from user_management.models import Client, ClientAPIToken, ClientUser, GCPUser
 from user_management.repositories.base import AlchemyRepository, Order, Schema
-from user_management.schemas import ClientAPITokenSchema, ClientSchema, SuccessfulAPIToken
+from user_management.schemas import ClientAPITokenSchema, ClientSchema, VerifiedAPITokenSchema
 
 
 class ClientRepository(AlchemyRepository):
@@ -84,12 +84,16 @@ class ClientRepository(AlchemyRepository):
 
         return ClientAPITokenSchema(client_uid=uid, token=token)
 
-    def check_api_token(self, client_uid: UUID4, token: str) -> SuccessfulAPIToken:
+    def check_api_token(self, token: str) -> VerifiedAPITokenSchema:
         """Given a Client UUID and its API token, it checks if it really is the valid token for the
         claiming client.
         """
-        client_api_token = self.db.get(ClientAPIToken, client_uid)
-        if not client_api_token or not pwd_context.verify(token, client_api_token.token):
-            raise AuthenticationError(context={"message": "Invalid API token."})
+        token_hash = pwd_context.hash(token)
+        try:
+            client_api_token = (
+                self.db.execute(select(ClientAPIToken).filter_by(token=token_hash)).scalars().one()
+            )
+        except NoResultFound as error:
+            raise AuthenticationError(context={"message": "Invalid API token."}) from error
 
-        return SuccessfulAPIToken(client_uid=client_uid)
+        return VerifiedAPITokenSchema(client_uid=client_api_token.client_uid)

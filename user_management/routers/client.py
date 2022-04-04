@@ -5,10 +5,11 @@ from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, get_database, staff_check, User, user_check
 from user_management.schemas import (
+    APITokenSchema,
     ClientAPITokenSchema,
     ClientSchema,
     NewNamedEntitySchema,
-    SuccessfulAPIToken,
+    VerifiedAPITokenSchema,
 )
 from user_management.services.client import ClientService
 
@@ -63,9 +64,6 @@ def generate_api_token(
     return ClientService(db).generate_api_token(uid=uid, user=user)
 
 
-@router.post("/api-token/verify", response_model=SuccessfulAPIToken)
-def verify_api_token(
-    payload: ClientAPITokenSchema,
-    db: DBSession = Depends(get_database),
-):
+@router.post("/api-token/verify", response_model=VerifiedAPITokenSchema)
+def verify_api_token(payload: APITokenSchema, db: DBSession = Depends(get_database)):
     return ClientService(db).verify_api_token(payload=payload)
