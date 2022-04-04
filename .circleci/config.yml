@@ -36,6 +36,7 @@ executors:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
       ACCOUNTS_BASE_URL: https://accounts.staging.hummingbird.com
       GCP_API_KEY: "secret"
+      ENCRYPT_SALT: "dummy-encrypt-salt-123"
 
 
 commands:
