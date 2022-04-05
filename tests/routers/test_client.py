@@ -294,29 +294,21 @@ def test_generate_api_token(
 
 
 @pytest.mark.parametrize(
-    ["client_uid", "bad_token", "expected_status"],
+    ["bad_token", "expected_status"],
     [
         pytest.param(
-            "623a2022-b976-465d-873b-9d94406a2ea8",
             None,
             status.HTTP_200_OK,
             id="Successful verification of API token",
         ),
         pytest.param(
-            "3836b9a5-5305-4f9e-91e3-85f342039c55",
-            None,
-            status.HTTP_401_UNAUTHORIZED,
-            id="Wrong verification of API token - Client UUID does not exist",
-        ),
-        pytest.param(
-            "623a2022-b976-465d-873b-9d94406a2ea8",
             "BADTOKEN",
             status.HTTP_401_UNAUTHORIZED,
             id="Wrong verification of API token - Client UUID does not exist",
         ),
     ],
 )
-def test_verify_api_token(test_client, sql_factory, client_uid, bad_token, expected_status):
+def test_verify_api_token(test_client, sql_factory, bad_token, expected_status):
     token = binascii.hexlify(os.urandom(20)).decode()
     client_api_token = sql_factory.client_api_token.create(
         token=token, client__uid="623a2022-b976-465d-873b-9d94406a2ea8"
@@ -324,7 +316,7 @@ def test_verify_api_token(test_client, sql_factory, client_uid, bad_token, expec
 
     response = test_client.post(
         "/api/v1/clients/api-token/verify",
-        json={"client_uid": client_uid, "token": token if not bad_token else bad_token},
+        json={"token": token if not bad_token else bad_token},
     )
 
     assert response.status_code == expected_status

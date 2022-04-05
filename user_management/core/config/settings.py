@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     sentry_dsn: Optional[HttpUrl]
     release: Optional[str]
 
+    # API tokens security
+    encrypt_salt: SecretStr
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -150,5 +150,9 @@ class ClientAPITokenSchema(BaseModel):
     token: str
 
 
-class SuccessfulAPIToken(BaseModel):
+class APITokenSchema(BaseModel):
+    token: str
+
+
+class VerifiedAPITokenSchema(BaseModel):
     client_uid: UUID4
