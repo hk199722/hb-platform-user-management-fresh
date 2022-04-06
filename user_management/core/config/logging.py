@@ -39,5 +39,10 @@ logging_config = {
             "propagate": False,
             "level": LOGGING_LEVEL,
         },
+        "sentry_sdk": {
+            "handlers": ["console"],
+            "propagate": False,
+            "level": LOGGING_LEVEL,
+        },
     },
 }

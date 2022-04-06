@@ -7,7 +7,7 @@ from pydantic.schema import Pattern
 
 
 class Settings(BaseSettings):
-    debug: bool = False
+    debug: bool = True
     google_project_id: str
     project_root: DirectoryPath = Path(__file__).resolve().parent.parent.parent.parent
 
