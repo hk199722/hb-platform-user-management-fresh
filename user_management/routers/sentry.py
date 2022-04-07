@@ -10,7 +10,7 @@ router = APIRouter()
 def test_sentry():
     import requests
 
-    response = requests.get("https://elpais.com")
+    response = requests.get("https://elpais.com", timeout=10)
     if response != 200:
         raise ConnectionError("Sentry connection error.")
 
