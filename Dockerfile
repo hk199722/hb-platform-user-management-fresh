@@ -11,4 +11,4 @@ COPY ./dist /opt
 
 RUN pip install --no-cache-dir --find-links /opt hb_platform_user_management
 
-CMD gunicorn user_management.main:create_app --bind=0.0.0.0:$PORT --config python:user_management.core.config.gunicorn
+CMD uvicorn --factory user_management.main:create_app --host 0.0.0.0 --port $PORT
