@@ -48,7 +48,7 @@ def create_app() -> FastAPI:
         # Otherwise, implement a `traces_sampler` function to customize transaction tracing
         # behaviour.
         # For more information: https://docs.sentry.io/platforms/python/configuration/sampling/
-        traces_sample_rate=0.15,
+        # traces_sample_rate=0.15,
         release=settings.release,
         debug=True,
     )
