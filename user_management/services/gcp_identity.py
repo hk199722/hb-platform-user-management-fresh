@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List, TypedDict, Union
 
+from aiohttp import ClientSession
 from fastapi import status
 from firebase_admin.auth import (
     create_user,
@@ -148,7 +149,7 @@ class GCPIdentityPlatformService:
 
         logger.info("User %s password has been successfully set up.", gcp_user_uid)
 
-    async def login_gcp_user(self, email: EmailStr, password: str):
+    async def login_gcp_user(self, email: EmailStr, password: str) -> dict[str, str]:
         """
         Performs a request to GCP Identity Platform REST API to sign in a user using its email and
         password.
@@ -177,3 +178,41 @@ class GCPIdentityPlatformService:
             raise AuthenticationError(context={"message": "Invalid credentials."})
 
         return response.json()
+
+    async def refresh_token_gcp_user(self, refresh_token: str) -> dict[str, str]:
+        """Performs a request to GCP Identity Platform REST API to refresh the current token for a
+        given user.
+        """
+        async with ClientSession(
+            base_url="https://identitytoolkit.googleapis.com",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        ) as session:
+            async with session.post(
+                f"/v1/token?key={self.api_key}",
+                data={"grant_type": "refresh_token", "refresh_token": refresh_token},
+            ) as response:
+                response_payload = await response.json()
+                if response.status == status.HTTP_400_BAD_REQUEST:
+                    message = response_payload.get("error", {}).get("message")
+
+                    try:
+                        raise {
+                            "INVALID_REFRESH_TOKEN": AuthenticationError(
+                                context={"message": "Invalid refresh token."}
+                            ),
+                            "TOKEN_EXPIRED": AuthenticationError(
+                                context={"message": "Token expired. Please log in again."}
+                            ),
+                            "USER_DISABLED": AuthenticationError(
+                                context={"message": "User has been disabled."}
+                            ),
+                            "USER_NOT_FOUND": AuthenticationError(
+                                context={"message": "User has been deleted."}
+                            ),
+                        }.get(message, KeyError)
+                    except KeyError:
+                        logger.error("Error when user tried to refresh token: %s", response_payload)
+                        # pylint: disable=raise-missing-from
+                        raise RemoteServiceError(context={"message": "Unable to refresh token."})
+
+        return response_payload
