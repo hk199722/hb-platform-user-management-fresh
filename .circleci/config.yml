@@ -299,6 +299,9 @@ jobs:
               --network container:cloud-sql-proxy \
               --env DATABASE_URL=${DB} \
               --env GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID} \
+              --env ACCOUNTS_BASE_URL=${ACCOUNTS_BASE_URL} \
+              --env GCP_API_KEY=${GCP_API_KEY} \
+              --env ENCRYPT_SALT=${ENCRYPT_SALT} \
               $IMAGE_NAME alembic upgrade head
           name: Run Alembic migrations
 
