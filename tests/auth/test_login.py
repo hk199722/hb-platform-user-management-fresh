@@ -1,10 +1,8 @@
 # pylint: disable=protected-access
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import status
-from requests.models import Response
 
 from tests.auth.mocks import (
     expired_refresh_token,
@@ -19,6 +17,7 @@ from tests.auth.mocks import (
 )
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     [
         "login_payload",
@@ -33,7 +32,7 @@ from tests.auth.mocks import (
             status.HTTP_200_OK,
             successful_login(),
             status.HTTP_200_OK,
-            json.loads(successful_login()),
+            successful_login(),
             id="Successful login",
         ),
         pytest.param(
@@ -68,9 +67,9 @@ from tests.auth.mocks import (
         ),
     ],
 )
-@patch("user_management.services.gcp_identity.Session")
+@patch("user_management.services.gcp_identity.ClientSession.post")
 def test_login(
-    mock_response,
+    mock_aiohttp,
     test_client,
     login_payload,
     gcp_response_code,
@@ -78,10 +77,14 @@ def test_login(
     expected_status,
     expected_response,
 ):
-    gcp_response = Response()
-    gcp_response.status_code = gcp_response_code
-    gcp_response._content = gcp_response_content
-    mock_response().post.return_value = gcp_response
+    # gcp_response = Response()
+    # gcp_response.status_code = gcp_response_code
+    # gcp_response._content = gcp_response_content
+    # mock_response().post.return_value = gcp_response
+    mock_gcp_response = AsyncMock()
+    mock_gcp_response.status = gcp_response_code
+    mock_gcp_response.json.return_value = gcp_response_content
+    mock_aiohttp.return_value.__aenter__.return_value = mock_gcp_response
 
     response = test_client.post("/api/v1/login", json=login_payload)
 
