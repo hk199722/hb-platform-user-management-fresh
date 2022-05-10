@@ -145,6 +145,10 @@ class LoginSchema(BaseModel):
     password: SecretStr
 
 
+class RefreshTokenSchema(BaseModel):
+    refresh_token: str
+
+
 class ClientAPITokenSchema(BaseModel):
     client_uid: UUID4
     token: str

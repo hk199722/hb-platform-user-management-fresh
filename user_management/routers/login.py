@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from user_management.schemas import LoginSchema
+from user_management.schemas import LoginSchema, RefreshTokenSchema
 from user_management.services import GCPIdentityPlatformService
 
 
@@ -13,3 +13,11 @@ async def login(login_credentials: LoginSchema):
         email=login_credentials.email, password=login_credentials.password.get_secret_value()
     )
     return login_response
+
+
+@router.post("/refresh-token")
+async def refresh_token(payload: RefreshTokenSchema):
+    refresh_response = await GCPIdentityPlatformService().refresh_token_gcp_user(
+        refresh_token=payload.refresh_token
+    )
+    return refresh_response
