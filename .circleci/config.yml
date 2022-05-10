@@ -263,7 +263,9 @@ jobs:
                 command: |
                   echo 'export SQL_CONNECTION=${STAGING_SQL_CONNECTION}' >> $BASH_ENV
                   echo 'export DB=${STAGING_DB}' >> $BASH_ENV
-                  echo 'export USER_MANAGEMENT_URL=${PRODUCTION_USER_MANAGEMENT_URL}' >> $BASH_ENV
+                  echo 'export ACCOUNTS_BASE_URL=${ACCOUNTS_BASE_URL}' >> $BASH_ENV
+                  echo 'export GCP_API_KEY=${GCP_API_KEY}' >> $BASH_ENV
+                  echo 'export ENCRYPT_SALT=${ENCRYPT_SALT}' >> $BASH_ENV
                   source $BASH_ENV
                 name: Set up target environment (Staging DB)
       - when:
@@ -274,7 +276,9 @@ jobs:
                 command: |
                   echo 'export SQL_CONNECTION=${PRODUCTION_SQL_CONNECTION}' >> $BASH_ENV
                   echo 'export DB=${PRODUCTION_DB}' >> $BASH_ENV
-                  echo 'export USER_MANAGEMENT_URL=${PRODUCTION_USER_MANAGEMENT_URL}' >> $BASH_ENV
+                  echo 'export ACCOUNTS_BASE_URL=${ACCOUNTS_BASE_URL}' >> $BASH_ENV
+                  echo 'export GCP_API_KEY=${GCP_API_KEY}' >> $BASH_ENV
+                  echo 'export ENCRYPT_SALT=${ENCRYPT_SALT}' >> $BASH_ENV
                   source $BASH_ENV
                 name: Set up target environment (Production DB)
       - run:
@@ -310,7 +314,7 @@ workflows:
       - test:
           project_id: hbt-staging
           requires:
-            - test-alembic-migrations
+            - build
 
       # Staging
       - push-docker-image:
@@ -318,6 +322,7 @@ workflows:
           env: staging
           requires:
             - test
+            - test-alembic-migrations
           context:
             - gcp-secrets
           filters:
@@ -353,6 +358,7 @@ workflows:
           type: approval
           requires:
             - test
+            - test-alembic-migrations
           filters:
             branches:
               only: main
