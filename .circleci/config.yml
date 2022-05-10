@@ -207,6 +207,18 @@ jobs:
               --allow-unauthenticated \
               --image ${IMAGE_NAME}:<< parameters.env >>
           name: Deploy to Google Cloud Run
+
+  notify-sentry:
+    executor: docker-publisher
+    environment:
+      SENTRY_ORG: hummingbird-technologies
+      SENTRY_PROJECT: survey-service
+      SENTRY_ENVIRONMENT: << parameters.project_id >>
+    parameters:
+      project_id:
+        type: string
+    steps:
+      - checkout
       - run:
           command: |
             curl -sL https://sentry.io/get-cli/ | bash
@@ -216,6 +228,82 @@ jobs:
             sentry-cli releases finalize $SENTRY_RELEASE
             sentry-cli releases deploys $SENTRY_RELEASE new -e $SENTRY_ENVIRONMENT
           name: Create release and notify Sentry of deploy
+
+  run-db-migrations:
+    executor: cloud-sdk
+    environment:
+      GOOGLE_PROJECT_ID: << parameters.project_id >>
+      ACCOUNTS_BASE_URL: << parameters.accounts_url >>
+      GCP_API_KEY: "not-a-real-gcp-key"
+      ENCRYPT_SALT: "1234567890abcdef123456"
+    parameters:
+      project_id:
+        type: string
+      accounts_url:
+        type: string
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - setup_remote_docker
+      - run:
+          command: docker load -i /tmp/workspace/image.tar
+          name: Load Docker image from workspace
+      - run:
+          command: |
+            echo "$GSA_KEY" > "$HOME"/gcloud.json
+            docker create -v /config --name configs alpine:3.4 /bin/true
+            docker cp "$HOME"/gcloud.json configs:/config
+          name: Set up Cloud SQL Proxy credentials
+      - when:
+          condition:
+            equal: [ hbt-staging, << parameters.project_id >> ]
+          steps:
+            - run:
+                command: |
+                  echo 'export SQL_CONNECTION=${STAGING_SQL_CONNECTION}' >> $BASH_ENV
+                  echo 'export DB=${STAGING_DB}' >> $BASH_ENV
+                  echo 'export ACCOUNTS_BASE_URL=${ACCOUNTS_BASE_URL}' >> $BASH_ENV
+                  echo 'export GCP_API_KEY=${GCP_API_KEY}' >> $BASH_ENV
+                  echo 'export ENCRYPT_SALT=${ENCRYPT_SALT}' >> $BASH_ENV
+                  source $BASH_ENV
+                name: Set up target environment (Staging DB)
+      - when:
+          condition:
+            equal: [ hummingbirdtech-production, << parameters.project_id >> ]
+          steps:
+            - run:
+                command: |
+                  echo 'export SQL_CONNECTION=${PRODUCTION_SQL_CONNECTION}' >> $BASH_ENV
+                  echo 'export DB=${PRODUCTION_DB}' >> $BASH_ENV
+                  echo 'export ACCOUNTS_BASE_URL=${ACCOUNTS_BASE_URL}' >> $BASH_ENV
+                  echo 'export GCP_API_KEY=${GCP_API_KEY}' >> $BASH_ENV
+                  echo 'export ENCRYPT_SALT=${ENCRYPT_SALT}' >> $BASH_ENV
+                  source $BASH_ENV
+                name: Set up target environment (Production DB)
+      - run:
+          command: |
+            docker run \
+              -d \
+              --name cloud-sql-proxy \
+              --volumes-from configs \
+              -p 127.0.0.1:5433:5433 \
+              gcr.io/cloudsql-docker/gce-proxy:1.30.0 /cloud_sql_proxy \
+              -instances=${SQL_CONNECTION}=tcp:0.0.0.0:5433 \
+              -credential_file=/config/gcloud.json
+          name: Start Cloud SQL Proxy
+      - run:
+          command: |
+            docker run \
+              --name user-management \
+              --network container:cloud-sql-proxy \
+              --env DATABASE_URL=${DB} \
+              --env GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID} \
+              --env ACCOUNTS_BASE_URL=${ACCOUNTS_BASE_URL} \
+              --env GCP_API_KEY=${GCP_API_KEY} \
+              --env ENCRYPT_SALT=${ENCRYPT_SALT} \
+              $IMAGE_NAME alembic upgrade head
+          name: Run Alembic migrations
 
 
 workflows:
@@ -229,7 +317,7 @@ workflows:
       - test:
           project_id: hbt-staging
           requires:
-            - test-alembic-migrations
+            - build
 
       # Staging
       - push-docker-image:
@@ -237,13 +325,14 @@ workflows:
           env: staging
           requires:
             - test
+            - test-alembic-migrations
           context:
             - gcp-secrets
           filters:
             branches:
               only: main
       - deploy:
-          name: deploy-cloud-run-staging
+          name: deploy-staging
           project_id: hbt-staging
           env: staging
           requires:
@@ -253,12 +342,26 @@ workflows:
           filters:
             branches:
               only: main
+      - notify-sentry:
+          name: notify-sentry-staging
+          project_id: hbt-staging
+          requires:
+            - deploy-staging
+      - run-db-migrations:
+          name: run-db-migrations-staging
+          project_id: hbt-staging
+          accounts_url: http://accounts.staging.hummingbirdtech.com
+          requires:
+            - deploy-staging
+          context:
+            - gcp-secrets
 
       # Production
       - hold:
           type: approval
           requires:
             - test
+            - test-alembic-migrations
           filters:
             branches:
               only: main
@@ -273,7 +376,7 @@ workflows:
             branches:
               only: main
       - deploy:
-          name: deploy-cloud-run-production
+          name: deploy-production
           project_id: hummingbirdtech-production
           env: prod
           requires:
@@ -283,3 +386,16 @@ workflows:
           filters:
             branches:
               only: main
+      - notify-sentry:
+          name: notify-sentry-production
+          project_id: hummingbirdtech-production
+          requires:
+            - deploy-production
+      - run-db-migrations:
+          name: run-db-migrations-production
+          project_id: hummingbirdtech-production
+          accounts_url: https://accounts.hummingbirdtech.com
+          requires:
+            - deploy-production
+          context:
+            - gcp-secrets
