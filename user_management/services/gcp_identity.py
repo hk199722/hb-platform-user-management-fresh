@@ -192,7 +192,7 @@ class GCPIdentityPlatformService:
                 data={"grant_type": "refresh_token", "refresh_token": refresh_token},
             ) as response:
                 response_payload = await response.json()
-                if response.status == status.HTTP_400_BAD_REQUEST:
+                if response.status != status.HTTP_200_OK:
                     message = response_payload.get("error", {}).get("message")
 
                     try:
@@ -211,6 +211,7 @@ class GCPIdentityPlatformService:
                             ),
                         }.get(message, KeyError)
                     except KeyError:
+                        # Handle random error from GCP Identity Platform.
                         logger.error("Error when user tried to refresh token: %s", response_payload)
                         # pylint: disable=raise-missing-from
                         raise RemoteServiceError(context={"message": "Unable to refresh token."})
