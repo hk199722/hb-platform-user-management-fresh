@@ -182,6 +182,16 @@ class GCPIdentityPlatformService:
     async def refresh_token_gcp_user(self, refresh_token: str) -> dict[str, str]:
         """Performs a request to GCP Identity Platform REST API to refresh the current token for a
         given user.
+
+        When submitting a refresh token request to GCP-IP, we handle this types of responses:
+        - Successful refresh token request (this should be the most common case).
+        - Invalid refresh token submitted, refresh token denied.
+        - Refresh token has expired. User needs to log in again, no refresh token can be used now.
+        - User has been disabled in GCP Identity Platform. The user exists, but during its session
+          it has been disabled by an admin so that person can't continue using the API.
+        - User not found in GCP-IP. Most probably, if the user did log in successfully and it had a
+          valid refresh token, the situation is that an admin completely deleted that user in GCP
+          Identity Platform.
         """
         async with ClientSession(
             base_url="https://identitytoolkit.googleapis.com",
