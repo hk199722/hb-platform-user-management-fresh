@@ -175,6 +175,7 @@ class GCPIdentityPlatformService:
                 response_payload = await response.json()
                 if response.status == status.HTTP_400_BAD_REQUEST:
                     if response_payload.get("error", {}).get("status") == "INVALID_ARGUMENT":
+                        logger.error("GCP error on user login: %s", response_payload)
                         raise RemoteServiceError(context={"message": "Service unavailable."})
 
                     raise AuthenticationError(context={"message": "Invalid credentials."})
