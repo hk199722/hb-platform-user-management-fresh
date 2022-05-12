@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=GCPUserSchema)
-def create_gcp_user(
+async def create_gcp_user(
     new_gcp_user: NewGCPUserSchema,
     user: User = Depends(user_check),
     db: DBSession = Depends(get_database),
@@ -29,19 +29,19 @@ def create_gcp_user(
 
 
 @router.get("/{uid}", response_model=GCPUserSchema)
-def get_gcp_user(
+async def get_gcp_user(
     uid: UUID4, user: User = Depends(user_check), db: DBSession = Depends(get_database)
 ):
     return GCPUserService(db).get_gcp_user(uid=uid, user=user)
 
 
 @router.get("", response_model=List[GCPUserSchema])
-def list_gcp_users(user: User = Depends(user_check), db: DBSession = Depends(get_database)):
+async def list_gcp_users(user: User = Depends(user_check), db: DBSession = Depends(get_database)):
     return GCPUserService(db).list_gcp_users(user=user)
 
 
 @router.patch("/{uid}", response_model=GCPUserSchema)
-def update_gcp_user(
+async def update_gcp_user(
     uid: UUID4,
     gcp_user: UpdateGCPUserSchema,
     user: User = Depends(user_check),
@@ -51,7 +51,7 @@ def update_gcp_user(
 
 
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
-def delete_gcp_user(
+async def delete_gcp_user(
     uid: UUID4, user: User = Depends(user_check), db: DBSession = Depends(get_database)
 ):
     return GCPUserService(db).delete_gcp_user(uid=uid, user=user)
@@ -60,7 +60,7 @@ def delete_gcp_user(
 @router.delete(
     "/{uid}/roles/{client_uid}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
 )
-def delete_gcp_user_role(
+async def delete_gcp_user_role(
     uid: UUID4,
     client_uid: UUID4,
     user: User = Depends(user_check),
@@ -74,7 +74,7 @@ def delete_gcp_user_role(
     status_code=status.HTTP_204_NO_CONTENT,
     response_class=Response,
 )
-def create_gcp_user_password(
+async def create_gcp_user_password(
     gcp_user_uid: UUID4,
     security_token: UUID4,
     password: CreatePasswordSchema,
@@ -88,5 +88,5 @@ def create_gcp_user_password(
 @router.get(
     "/{email}/reset-password", status_code=status.HTTP_204_NO_CONTENT, response_class=Response
 )
-def reset_gcp_user_password(email: EmailStr, db: DBSession = Depends(get_database)):
+async def reset_gcp_user_password(email: EmailStr, db: DBSession = Depends(get_database)):
     MailerService(db).reset_password_message(gcp_user_email=email)

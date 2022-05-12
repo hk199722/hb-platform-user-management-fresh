@@ -17,7 +17,6 @@ from firebase_admin.auth import (
 )
 from firebase_admin.exceptions import FirebaseError, InvalidArgumentError, PermissionDeniedError
 from pydantic import EmailStr, UUID4
-from requests import Session
 
 from user_management.core.config.settings import get_settings
 from user_management.core.exceptions import (
@@ -41,7 +40,10 @@ class GCPIdentityPlatformService:
 
     def __init__(self):
         self.api_key = get_settings().gcp_api_key.get_secret_value()
-        self.api_session = Session()
+        self.gcp_api_session = ClientSession(
+            base_url="https://identitytoolkit.googleapis.com",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
 
     @staticmethod
     def _handle_gcp_exception(error: Exception, gcp_user: Union[GCPUserSchema, UUID4]) -> None:
@@ -165,28 +167,35 @@ class GCPIdentityPlatformService:
 
         Other possible errors are mostly undocumented in GCP.
         """
-        response = self.api_session.post(
-            f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={self.api_key}",
-            data={"email": email, "password": password, "returnSecureToken": True},
-        )
+        async with self.gcp_api_session as session:
+            async with session.post(
+                f"/v1/accounts:signInWithPassword?key={self.api_key}",
+                data={"email": email, "password": password, "returnSecureToken": True},
+            ) as response:
+                response_payload = await response.json()
+                if response.status == status.HTTP_400_BAD_REQUEST:
+                    if response_payload.get("error", {}).get("status") == "INVALID_ARGUMENT":
+                        raise RemoteServiceError(context={"message": "Service unavailable."})
 
-        if response.status_code == status.HTTP_400_BAD_REQUEST:
-            message = response.json()
-            if message.get("error", {}).get("status") == "INVALID_ARGUMENT":
-                raise RemoteServiceError(context={"message": "Service unavailable."})
+                    raise AuthenticationError(context={"message": "Invalid credentials."})
 
-            raise AuthenticationError(context={"message": "Invalid credentials."})
-
-        return response.json()
+            return response_payload
 
     async def refresh_token_gcp_user(self, refresh_token: str) -> dict[str, str]:
         """Performs a request to GCP Identity Platform REST API to refresh the current token for a
         given user.
+
+        When submitting a refresh token request to GCP-IP, we handle this types of responses:
+        - Successful refresh token request (this should be the most common case).
+        - Invalid refresh token submitted, refresh token denied.
+        - Refresh token has expired. User needs to log in again, no refresh token can be used now.
+        - User has been disabled in GCP Identity Platform. The user exists, but during its session
+          it has been disabled by an admin so that person can't continue using the API.
+        - User not found in GCP-IP. Most probably, if the user did log in successfully and it had a
+          valid refresh token, the situation is that an admin completely deleted that user in GCP
+          Identity Platform.
         """
-        async with ClientSession(
-            base_url="https://identitytoolkit.googleapis.com",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        ) as session:
+        async with self.gcp_api_session as session:
             async with session.post(
                 f"/v1/token?key={self.api_key}",
                 data={"grant_type": "refresh_token", "refresh_token": refresh_token},
