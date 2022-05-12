@@ -9,7 +9,7 @@ executors:
     environment:
       IMAGE_NAME: eu.gcr.io/hummingbird-technologies/platform/hb-platform-user-management
     docker:
-      - image: circleci/buildpack-deps:buster
+      - image: cimg/base:stable
     resource_class: medium
 
   cloud-sdk:
