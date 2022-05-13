@@ -24,7 +24,7 @@ executors:
       - image: cimg/python:3.10.0
       - image: cimg/postgres:13.4
         environment:
-          POSTGRES_DB: postgres
+          POSTGRES_DB: user_management
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
     resource_class: medium
@@ -105,7 +105,7 @@ jobs:
   test-alembic-migrations:
     executor: tests-runner
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@localhost/postgres
+      DATABASE_URL: postgresql://postgres:postgres@localhost/user_management
       GOOGLE_PROJECT_ID: << parameters.project_id >>
     parameters:
       project_id:

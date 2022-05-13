@@ -13,5 +13,6 @@ services:
     image: postgis/postgis:13-3.1
     ports: [5432:5432]
     environment:
+      POSTGRES_DB: user_management
       POSTGRES_PASSWORD: password
     links: [webapp]
