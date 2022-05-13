@@ -6,16 +6,21 @@ from pydantic import BaseSettings, DirectoryPath, HttpUrl, PostgresDsn, SecretSt
 from pydantic.schema import Pattern
 
 
-class Settings(BaseSettings):
-    debug: bool = True
-    google_project_id: str
-    project_root: DirectoryPath = Path(__file__).resolve().parent.parent.parent.parent
-
-    # Database
+class DBSettings(BaseSettings):
     database_url: PostgresDsn
     database_pool_size: int = 40
     database_max_overflow: int = 10
     database_pool_recycle: int = 3600
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+
+class Settings(DBSettings):
+    debug: bool = True
+    google_project_id: str
+    project_root: DirectoryPath = Path(__file__).resolve().parent.parent.parent.parent
 
     # Platform services
     accounts_base_url: HttpUrl
@@ -39,10 +44,6 @@ class Settings(BaseSettings):
 
     # API tokens security
     encrypt_salt: SecretStr
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 @lru_cache(maxsize=1)

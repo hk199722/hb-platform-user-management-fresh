@@ -11,11 +11,11 @@ from alembic import context
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from user_management import models  # NOQA
-from user_management.core.config.settings import get_settings
+from user_management.core.config.settings import DBSettings
 from user_management.core.database import Base
 
 
-database_url = get_settings().database_url
+database_url = DBSettings().database_url
 
 
 # this is the Alembic Config object, which provides
