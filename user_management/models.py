@@ -96,7 +96,10 @@ class SecurityToken(Base):
     )
     created = Column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("GCPUser", backref=backref("security_token", uselist=False))
+    user = relationship(
+        "GCPUser",
+        backref=backref("security_token", uselist=False, cascade="all, delete"),
+    )
 
 
 class ClientAPIToken(Base):

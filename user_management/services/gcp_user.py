@@ -1,8 +1,10 @@
+import logging
 from typing import List
 
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
+from user_management.core.exceptions import ResourceNotFoundError
 from user_management.repositories import GCPUserRepository
 from user_management.repositories import SecurityTokenRepository
 from user_management.schemas import (
@@ -13,6 +15,8 @@ from user_management.schemas import (
 )
 from user_management.services.auth import AuthService
 from user_management.services.gcp_identity import GCPIdentityPlatformService
+
+logger = logging.getLogger(__name__)
 
 
 class GCPUserService:
@@ -78,7 +82,11 @@ class GCPUserService:
     def delete_gcp_user(self, uid: UUID4, user: User) -> None:
         """Deletes `GCPUser` from local database, and also from GCP Identity Platform."""
         self.auth_service.check_gcp_user_delete_allowance(request_user=user, uid=uid)
-        self.gcp_identity_service.remove_gcp_user(uid=uid)
+        try:
+            self.gcp_identity_service.remove_gcp_user(uid=uid)
+        except ResourceNotFoundError:
+            # If the user is already gone then it's not a failure, so we should still delete locally
+            logger.warning("The user couldn't be found on GCP, proceeding to delete locally")
         self.gcp_user_repository.delete(pk=uid)
 
     def delete_gcp_user_role(self, uid: UUID4, client_uid: UUID4, user: User) -> None:
