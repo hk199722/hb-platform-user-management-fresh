@@ -205,7 +205,7 @@ jobs:
     executor: docker-publisher
     environment:
       SENTRY_ORG: hummingbird-technologies
-      SENTRY_PROJECT: survey-service
+      SENTRY_PROJECT: user-management
       SENTRY_ENVIRONMENT: << parameters.project_id >>
     parameters:
       project_id:
