@@ -1,3 +1,4 @@
+import http
 import json
 import uuid
 from unittest.mock import patch
@@ -11,7 +12,7 @@ from firebase_admin.auth import (
     UidAlreadyExistsError,
     UserNotFoundError,
 )
-from firebase_admin.exceptions import InvalidArgumentError
+from firebase_admin.exceptions import InvalidArgumentError, FirebaseError
 from sqlalchemy import func, select
 
 from user_management.core.config.settings import get_settings
@@ -757,8 +758,19 @@ def test_delete_gcp_user(
                 cause="USER_NOT_FOUND",
                 http_response=None,
             ),
-            status.HTTP_404_NOT_FOUND,
+            status.HTTP_204_NO_CONTENT,
             id="Wrong user deletion syncing with GCP - Non existent user UID",
+        ),
+        pytest.param(
+            "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",
+            FirebaseError(
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                message="Couldn't connect to firebase services",
+                cause="FIREBASE_ERROR",
+                http_response=None,
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            id="Wrong user deletion syncing with GCP - Firebase is down",
         ),
     ],
 )
@@ -786,12 +798,59 @@ def test_delete_sync_gcp_user_errors(
     assert response.status_code == expected_status
     # Check that User and its Client is still there. Users must be first deleted from GCP-IP backend
     # and later from local DB. If any problem occurs in GCP-IP the user must remain in DB as well.
+    user_count = 0 if expected_status == status.HTTP_204_NO_CONTENT else 1
     assert (
         test_db_session.scalar(
             select(func.count()).select_from(GCPUser).filter_by(uid=gcp_user.uid)
         )
+        == user_count
+    )
+    assert (
+        test_db_session.scalar(
+            select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)
+        )
         == 1
     )
+
+
+@patch("user_management.services.gcp_identity.delete_user")
+def test_delete_user_with_no_password(
+    mock_identity_platform,
+    test_client,
+    user_info,
+    test_db_session,
+    sql_factory,
+):
+    user_uid = "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc"
+
+    mock_identity_platform.side_effect = None
+    gcp_user = sql_factory.gcp_user.create(uid=user_uid)
+    user_client = sql_factory.client_user.create(user=gcp_user, client=user_info.client_1)
+    security_token = sql_factory.security_token.create(uid=user_uid, user=gcp_user)
+    test_db_session.commit()
+
+    response = test_client.delete(
+        f"/api/v1/users/{user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+    )
+
+    assert response.status_code == http.HTTPStatus.NO_CONTENT
+
+    # Make sure the user can be deleted
+    assert (
+        test_db_session.scalar(
+            select(func.count()).select_from(GCPUser).filter_by(uid=gcp_user.uid)
+        )
+        == 0
+    )
+    # Make sure the token has been deleted too
+    assert (
+        test_db_session.scalar(
+            select(func.count()).select_from(SecurityToken).filter_by(uid=security_token.uid)
+        )
+        == 0
+    )
+    # Make sure the client is still there
     assert (
         test_db_session.scalar(
             select(func.count()).select_from(Client).filter_by(uid=user_client.client_uid)

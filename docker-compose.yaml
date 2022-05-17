@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  webapp:
+    build: .
+    ports: [ 8081:80 ]
+    volumes:
+      - ./:/app/:rw,cached
+    command: uvicorn user_management.main:create_app --reload --port 80 --host 0.0.0.0 --factory
+    env_file:
+      - .env
+  db:
+    image: postgis/postgis:13-3.1
+    ports: [5432:5432]
+    environment:
+      POSTGRES_DB: user_management
+      POSTGRES_PASSWORD: password
+    links: [webapp]
