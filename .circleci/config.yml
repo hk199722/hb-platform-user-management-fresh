@@ -28,6 +28,8 @@ executors:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
     resource_class: medium
+    environment:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/postgres
 
 
 commands:
@@ -47,7 +49,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-          version: 19.03.14
+          version: 20.10.14
       - update-poetry
       - python/install-packages:
           pkg-manager: poetry
@@ -105,7 +107,6 @@ jobs:
   test-alembic-migrations:
     executor: tests-runner
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@localhost/user_management
       GOOGLE_PROJECT_ID: << parameters.project_id >>
     parameters:
       project_id:
@@ -169,7 +170,7 @@ jobs:
           command: echo $GSA_KEY | docker login -u _json_key --password-stdin https://eu.gcr.io
           name: Log in to Google Container Registry
       - run:
-          command: docker push $IMAGE_NAME
+          command: docker push --all-tags $IMAGE_NAME
           name: Push image
 
   deploy:
