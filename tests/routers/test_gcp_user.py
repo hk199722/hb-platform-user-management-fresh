@@ -913,9 +913,9 @@ def test_delete_client_user(test_client, user_info, test_db_session, sql_factory
         ),
     ],
 )
-@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+@patch("user_management.services.gcp_identity.update_user")
 def test_create_gcp_user_password(
-    mock_identity_platform,
+    mock_update_user,
     test_client,
     test_db_session,
     sql_factory,
@@ -937,9 +937,7 @@ def test_create_gcp_user_password(
     # Valid data submitted. Check up password creation and Security Token disposal.
     if expected_status == status.HTTP_204_NO_CONTENT:
         # Password creation triggered with the GCP-IP SDK function.
-        mock_identity_platform().set_password.assert_called_with(
-            gcp_user_uid=uuid.UUID(gcp_user.uid), password="testing"
-        )
+        mock_update_user.assert_called_with(uid=gcp_user.uid, password="testing")
 
         # Security Token deleted from database, as it has been successfully used.
         assert (
