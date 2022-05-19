@@ -145,7 +145,7 @@ class GCPIdentityPlatformService:
     def set_password(self, gcp_user_uid: UUID4, password: str):
         """Sets up the user password for the given GCP-IP user ID."""
         try:
-            update_user(uid=gcp_user_uid, password=password)
+            update_user(uid=str(gcp_user_uid), password=password)
         except Exception as error:  # pylint: disable=broad-except
             self._handle_gcp_exception(error, gcp_user_uid)
 
