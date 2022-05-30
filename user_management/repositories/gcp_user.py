@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, UUID4
 from sqlalchemy import func, select
 from sqlalchemy.exc import NoResultFound
 
-from user_management.core.exceptions import ResourceConflictError, ResourceNotFoundError
+from user_management.core.exceptions import ResourceNotFoundError
 from user_management.models import ClientUser, GCPUser, Role
 from user_management.repositories.base import AlchemyRepository, Order, Schema
 from user_management.schemas import ClientUserSchema, GCPUserSchema
@@ -27,14 +27,8 @@ class GCPUserRepository(AlchemyRepository):
             if existing_client_user:
                 # User already has a role in the given Client.
                 if existing_client_user.role == client_user.role:
-                    # The user already has this role in the given Client.
-                    raise ResourceConflictError(
-                        context={
-                            "message": f"User {existing_client_user.gcp_user_uid} is already a "
-                            f"{existing_client_user.role.value} in client "
-                            f"{existing_client_user.client_uid}"
-                        }
-                    )
+                    # The user already has this role in the given Client. So don't do anything.
+                    return ready_response
 
                 # Role has changed.
                 existing_client_user.role = client_user.role

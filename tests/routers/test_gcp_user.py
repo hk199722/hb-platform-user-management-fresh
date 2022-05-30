@@ -503,8 +503,8 @@ def test_update_gcp_user_role_success(
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
             {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
-            status.HTTP_409_CONFLICT,
-            id="Wrong user update - role already registered",
+            status.HTTP_200_OK,
+            id="User update - role already registered",  # Not an error just a no op
         ),
         pytest.param(
             "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc",

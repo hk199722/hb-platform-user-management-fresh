@@ -5,8 +5,8 @@ services:
     build: .
     ports: [ 8081:80 ]
     volumes:
-      - ./:/app/:rw,cached
-    command: uvicorn user_management.main:create_app --reload --port 80 --host 0.0.0.0 --factory
+      - ./:/app/
+    command: uvicorn user_management.main:create_app --reload --reload-dir=/app --port 80 --host 0.0.0.0 --factory
     env_file:
       - .env
   db:
