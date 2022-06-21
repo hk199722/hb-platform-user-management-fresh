@@ -34,6 +34,7 @@ def check_phone_number(value: Optional[str]) -> Optional[str]:
 class ClientSchema(BaseModel):
     name: str
     uid: UUID4
+    callback_url: Optional[str] = ""
 
     _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
 
