@@ -51,7 +51,7 @@ def test_get_client(test_client, user_info):
     expected = {
         "name": user_info.client_2.name,
         "uid": str(user_info.client_2.uid),
-        "callback_url": str(user_info.client_2.callback_url),
+        "webhook_url": str(user_info.client_2.webhook_url),
     }
     assert response.json() == expected
 
@@ -82,7 +82,7 @@ def test_list_clients(test_client, user_info, sql_factory):
         {
             "name": client_user.client.name,
             "uid": str(client_user.client.uid),
-            "callback_url": str(client_user.client.callback_url),
+            "webhook_url": str(client_user.client.webhook_url),
         }
         for client_user in client_users
     ]
@@ -92,12 +92,12 @@ def test_list_clients(test_client, user_info, sql_factory):
             {
                 "name": user_info.client_1.name,
                 "uid": str(user_info.client_1.uid),
-                "callback_url": str(user_info.client_1.callback_url),
+                "webhook_url": str(user_info.client_1.webhook_url),
             },
             {
                 "name": user_info.client_2.name,
                 "uid": str(user_info.client_2.uid),
-                "callback_url": str(user_info.client_2.callback_url),
+                "webhook_url": str(user_info.client_2.webhook_url),
             },
         ]
     )

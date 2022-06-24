@@ -34,7 +34,7 @@ class Client(Base):
 
     uid = Column(UUID(as_uuid=True), server_default=func.uuid_generate_v4(), primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
-    callback_url = Column(String(255), unique=False, nullable=True)
+    webhook_url = Column(String(255), unique=False, nullable=True)
 
     capabilities = relationship("ClientCapability", back_populates="client", cascade="all, delete")
     users = relationship("ClientUser", back_populates="client", cascade="all, delete")
@@ -43,7 +43,7 @@ class Client(Base):
     )
 
     def __repr__(self):
-        return f"<Client: uid={self.uid}, name={self.name}, callback_url={self.callback_url}>"
+        return f"<Client: uid={self.uid}, name={self.name}, webhook_url={self.webhook_url}>"
 
 
 class Capability(Base):

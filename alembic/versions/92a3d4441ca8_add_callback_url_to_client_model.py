@@ -1,4 +1,4 @@
-"""add callback_url to client model
+"""add webhook_url to client model
 
 Revision ID: 92a3d4441ca8
 Revises: 35ce987befa7
@@ -17,8 +17,8 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("client", sa.Column("callback_url", sa.String(length=255), nullable=True))
+    op.add_column("client", sa.Column("webhook_url", sa.String(length=255), nullable=True))
 
 
 def downgrade():
-    op.drop_column("client", "callback_url")
+    op.drop_column("client", "webhook_url")

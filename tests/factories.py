@@ -37,7 +37,7 @@ class BaseModelFactory(factory.alchemy.SQLAlchemyModelFactory):
 class ClientFactory(BaseModelFactory):
     uid = factory.Sequence(lambda n: uuid.uuid4())
     name = factory.Sequence(lambda n: f"Client-{n}")
-    callback_url = factory.Sequence(lambda n: f"https://{n}.clienturl.com")
+    webhook_url = factory.Sequence(lambda n: f"https://{n}.clienturl.com")
 
     class Meta:
         model = Client

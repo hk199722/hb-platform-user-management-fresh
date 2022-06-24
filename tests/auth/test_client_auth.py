@@ -27,7 +27,7 @@ def test_get_client_staff(test_client, staff_user_info, sql_factory):
     expected = {
         "name": client.name,
         "uid": str(client.uid),
-        "callback_url": str(client.callback_url),
+        "webhook_url": str(client.webhook_url),
     }
     assert response.json() == expected
 
