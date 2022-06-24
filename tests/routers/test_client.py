@@ -48,7 +48,11 @@ def test_get_client(test_client, user_info):
 
     assert response.status_code == status.HTTP_200_OK
 
-    expected = {"name": user_info.client_2.name, "uid": str(user_info.client_2.uid)}
+    expected = {
+        "name": user_info.client_2.name,
+        "uid": str(user_info.client_2.uid),
+        "webhook_url": str(user_info.client_2.webhook_url),
+    }
     assert response.json() == expected
 
 
@@ -75,14 +79,26 @@ def test_list_clients(test_client, user_info, sql_factory):
 
     # The clients we created above for the user...
     expected = [
-        {"name": client_user.client.name, "uid": str(client_user.client.uid)}
+        {
+            "name": client_user.client.name,
+            "uid": str(client_user.client.uid),
+            "webhook_url": str(client_user.client.webhook_url),
+        }
         for client_user in client_users
     ]
     # ...and the ones the user already belong, from conftest.
     expected.extend(
         [
-            {"name": user_info.client_1.name, "uid": str(user_info.client_1.uid)},
-            {"name": user_info.client_2.name, "uid": str(user_info.client_2.uid)},
+            {
+                "name": user_info.client_1.name,
+                "uid": str(user_info.client_1.uid),
+                "webhook_url": str(user_info.client_1.webhook_url),
+            },
+            {
+                "name": user_info.client_2.name,
+                "uid": str(user_info.client_2.uid),
+                "webhook_url": str(user_info.client_2.webhook_url),
+            },
         ]
     )
 

@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, SecretStr, UUID4, validator
+from pydantic import BaseModel, EmailStr, SecretStr, UUID4, HttpUrl, validator
 
 from user_management.models import Role
 
@@ -34,6 +34,7 @@ def check_phone_number(value: Optional[str]) -> Optional[str]:
 class ClientSchema(BaseModel):
     name: str
     uid: UUID4
+    webhook_url: Optional[HttpUrl]
 
     _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
 

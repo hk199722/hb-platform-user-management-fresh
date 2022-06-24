@@ -17,7 +17,6 @@ from tests.auth.mocks import (
 )
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     [
         "login_payload",

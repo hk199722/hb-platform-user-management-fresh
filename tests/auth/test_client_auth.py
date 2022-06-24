@@ -24,7 +24,11 @@ def test_get_client_staff(test_client, staff_user_info, sql_factory):
 
     assert response.status_code == status.HTTP_200_OK
 
-    expected = {"name": client.name, "uid": str(client.uid)}
+    expected = {
+        "name": client.name,
+        "uid": str(client.uid),
+        "webhook_url": str(client.webhook_url),
+    }
     assert response.json() == expected
 
 
