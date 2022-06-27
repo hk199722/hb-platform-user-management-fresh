@@ -56,6 +56,18 @@ class ClientUserSchema(BaseModel):
         orm_mode = True
 
 
+def check_role(role: Optional[ClientUserSchema], values):
+    """If roles have been passed they need to meet certain requirements
+    if staff=True roles must be empty
+    """
+    if values.get("staff"):
+        if role:
+            raise ValueError("Cannot add clients to staff users")
+        return None
+
+    return role
+
+
 class GCPUserSchema(BaseModel):
     uid: UUID4
     name: str
@@ -84,6 +96,7 @@ class NewGCPUserSchema(BaseModel):
     _validate_phone = validator("phone_number", pre=True, always=True, allow_reuse=True)(
         check_phone_number
     )
+    _validate_role = validator("role", pre=True, always=True, allow_reuse=True)(check_role)
 
 
 class UpdateGCPUserSchema(BaseModel):
@@ -97,6 +110,7 @@ class UpdateGCPUserSchema(BaseModel):
     _validate_phone = validator("phone_number", pre=True, always=True, allow_reuse=True)(
         check_phone_number
     )
+    _validate_role = validator("role", pre=True, always=True, allow_reuse=True)(check_role)
 
 
 class CreateSecurityTokenSchema(BaseModel):

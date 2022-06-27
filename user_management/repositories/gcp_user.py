@@ -70,7 +70,7 @@ class GCPUserRepository(AlchemyRepository):
 
     def list_restricted(
         self,
-        clients: List[str],
+        clients: List[UUID4],
         order_by: Order = None,
         **filters,
     ) -> List[Schema]:
@@ -99,7 +99,9 @@ class GCPUserRepository(AlchemyRepository):
             {"message": f"User {gcp_user} doesn't have a role with Client {client}."}
         )
 
-    def get_matching_clients(self, gcp_user_uid: UUID4, clients: Iterable[str]) -> List[UUID4]:
+    def get_matching_clients(
+        self, gcp_user_uid: UUID4, clients: Iterable[UUID4]
+    ) -> List[ClientUser]:
         """Given a `GCPUser.uid` and an iterable of `Client.uid`s, it returns a list of `Client.uid`
         the user belongs to, from the given iterable.
         """

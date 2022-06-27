@@ -1,12 +1,9 @@
-from typing import Optional
-
 from pydantic import UUID4
 
 from user_management.core.dependencies import DBSession, User
 from user_management.core.exceptions import AuthorizationError, ResourceNotFoundError
-from user_management.models import Role
 from user_management.repositories import GCPUserRepository
-from user_management.schemas import UpdateGCPUserSchema
+from user_management.schemas import GCPUserSchema, UpdateGCPUserSchema
 
 
 class AuthService:
@@ -15,7 +12,7 @@ class AuthService:
 
     def check_staff_permission(self, request_user: User) -> None:
         if not request_user.staff:
-            raise AuthorizationError()
+            raise ResourceNotFoundError()
 
     def check_gcp_user_view_allowance(self, request_user: User, uid: UUID4) -> None:
         """Checks if the given `request_user` does have permissions to view a certain `GCPUser`."""
@@ -28,36 +25,37 @@ class AuthService:
             raise ResourceNotFoundError()
 
     def check_gcp_user_edit_allowance(
-        self, request_user: User, uid: UUID4, schema: Optional[UpdateGCPUserSchema] = None
-    ) -> None:
+        self, request_user: User, uid: UUID4, schema: UpdateGCPUserSchema
+    ):
         """Checks if the user can perform actions on the details of another user, such as changing
         or deleting them.
         """
-        if request_user.staff or request_user.uid == uid:
-            return None
+        if request_user.uid != uid:
+            # Only staff can edit other users
+            self.check_staff_permission(request_user)
 
-        superuser_clients = [
-            client_uid
-            for client_uid, role in request_user.roles.items()
-            if role == Role.SUPERUSER.value
-        ]
-        superuser_matching = self.gcp_user_repository.get_matching_clients(
-            gcp_user_uid=uid, clients=superuser_clients
-        )
-        if not superuser_matching:
-            # Selected user doesn't seem to belong to any Client from which the request user is a
-            # SUPERUSER. Check if the selected user is currently being added to a Client in which
-            # the request user is a SUPERUSER, which MUST be allowed.
-            matching = self.gcp_user_repository.get_matching_clients(
-                gcp_user_uid=uid,
-                clients=[client_uid for client_uid, role in request_user.roles.items()],
-            )
-            if not matching:
-                raise ResourceNotFoundError()
+        if schema.staff:
+            # Only staff can promote other users to staff
+            self.check_staff_permission(request_user)
+            return  # Staff don't have other roles so don't waste time
 
-            if schema is not None:
-                if schema.role is not None and str(schema.role.client_uid) not in superuser_clients:
-                    raise ResourceNotFoundError()
+        if schema.role is None:
+            # Only staff can create users with no clients assigned
+            self.check_staff_permission(request_user)
+            return
+
+        user_to_edit: GCPUserSchema = self.gcp_user_repository.get(uid)
+        current_roles = {
+            client_user.client_uid: client_user.role for client_user in user_to_edit.clients
+        }
+
+        updated_roles = {schema.role.client_uid: schema.role.role}
+
+        if current_roles != updated_roles:
+            # The roles have changed, so we need to check if the user has permission to do that
+            # TODO: When adding multiple clients to a user check each client individually
+            # https://hummingbirdtech.atlassian.net/browse/FRSH-808
+            self.check_client_allowance(request_user, schema.role.client_uid)
 
     def check_gcp_user_delete_allowance(self, request_user: User, uid: UUID4) -> None:
         """Checks if the given `request user` does have permissions to delete another user. Only HB
@@ -112,12 +110,12 @@ class AuthService:
             gcp_user_uid=request_user.uid, client_uid=client_uid
         )
         if not superuser:
-            raise AuthorizationError()
+            raise ResourceNotFoundError()
 
     def check_client_member(self, request_user: User, client_uid: UUID4) -> None:
         """Checks if the given `request_user` does have permissions to read `client` data."""
         if request_user.staff:
             return None
 
-        if str(client_uid) not in request_user.roles.keys():
+        if client_uid not in request_user.roles.keys():
             raise ResourceNotFoundError()

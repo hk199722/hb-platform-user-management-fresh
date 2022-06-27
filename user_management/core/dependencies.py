@@ -1,31 +1,30 @@
 import base64
 import binascii
-import dataclasses
 import json
 import logging
 from typing import Dict, Generator, TypeVar
 
 from fastapi import Header
-from pydantic import UUID4
+from pydantic import UUID4, BaseModel
 from sqlalchemy.orm import scoped_session, Session
 
 from user_management.core.database import db_session_factory
 from user_management.core.exceptions import AuthenticationError, AuthorizationError
+from user_management.models import Role
 
 logger = logging.getLogger(__name__)
 
 DBSession = TypeVar("DBSession", scoped_session, Session)
 
 
-@dataclasses.dataclass
-class User:
+class User(BaseModel):
     """User definition object to be passed to logic from the GCP Identity Platform user info
     payload. It represents the authenticated user who makes the request to the API.
     """
 
     uid: UUID4
     staff: bool
-    roles: Dict[str, str]
+    roles: Dict[UUID4, Role]
 
 
 def get_database() -> Generator[scoped_session, None, None]:

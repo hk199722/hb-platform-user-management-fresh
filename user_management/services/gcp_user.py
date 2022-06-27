@@ -93,7 +93,7 @@ class GCPUserService:
         """Deletes `ClientUser` associative object from local database, given a `GCPUser.uid` and a
         `Client.uid`.
         """
-        self.auth_service.check_gcp_user_edit_allowance(request_user=user, uid=uid)
+        self.auth_service.check_client_allowance(request_user=user, client_uid=client_uid)
         self.gcp_user_repository.delete_client_user(gcp_user=uid, client=client_uid)
 
     def set_user_password(self, uid: UUID4, token: UUID4, password: str) -> None:
