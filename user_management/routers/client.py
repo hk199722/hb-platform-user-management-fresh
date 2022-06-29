@@ -8,6 +8,7 @@ from user_management.schemas import (
     APITokenSchema,
     ClientAPITokenSchema,
     ClientSchema,
+    ClientUpdateSchema,
     NewNamedEntitySchema,
     VerifiedAPITokenSchema,
 )
@@ -41,7 +42,7 @@ async def list_clients(user: User = Depends(user_check), db: DBSession = Depends
 @router.patch("/{uid}", response_model=ClientSchema)
 async def update_client(
     uid: UUID4,
-    client: NewNamedEntitySchema,
+    client: ClientUpdateSchema,
     user: User = Depends(staff_check),  # pylint: disable=unused-argument
     db: DBSession = Depends(get_database),
 ):

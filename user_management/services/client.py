@@ -8,6 +8,7 @@ from user_management.schemas import (
     APITokenSchema,
     ClientAPITokenSchema,
     ClientSchema,
+    ClientUpdateSchema,
     NewNamedEntitySchema,
     VerifiedAPITokenSchema,
 )
@@ -34,7 +35,7 @@ class ClientService:
 
         return self.client_repository.list_restricted(user=user)
 
-    def update_client(self, uid: UUID4, client: NewNamedEntitySchema) -> ClientSchema:
+    def update_client(self, uid: UUID4, client: ClientUpdateSchema) -> ClientSchema:
         return self.client_repository.update(pk=uid, schema=client)
 
     def delete_client(self, uid: UUID4) -> None:
