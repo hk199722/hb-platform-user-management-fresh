@@ -48,6 +48,13 @@ class NewNamedEntitySchema(BaseModel):
     _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
 
 
+class ClientUpdateSchema(BaseModel):
+    name: Optional[str]
+    webhook_url: Optional[HttpUrl]
+
+    _validate_name = validator("name", pre=True, always=True, allow_reuse=True)(check_empty_string)
+
+
 class ClientUserSchema(BaseModel):
     client_uid: UUID4
     role: Role

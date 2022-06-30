@@ -50,11 +50,12 @@ def test_update_client_staff(test_client, staff_user_info, sql_factory):
     response = test_client.patch(
         f"/api/v1/clients/{client.uid}",
         headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
-        json={"name": "MegaCorp Ltd."},
+        json={"name": "MegaCorp Ltd.", "webhook_url": "https://test-webhook.hummingbirdtech.com/"},
     )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json().get("name") == "MegaCorp Ltd."
+    assert response.json().get("webhook_url") == "https://test-webhook.hummingbirdtech.com/"
 
 
 def test_delete_client_unauthorized(test_client, user_info):
