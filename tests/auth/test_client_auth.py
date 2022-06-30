@@ -87,7 +87,7 @@ def test_generate_api_token_unauthorized(test_client, user_info):
         headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
 
 def test_generate_api_token_staff(test_client, staff_user_info, sql_factory):

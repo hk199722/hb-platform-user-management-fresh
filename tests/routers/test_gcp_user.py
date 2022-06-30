@@ -21,12 +21,138 @@ from user_management.schemas import GCPUserSchema
 
 
 @pytest.mark.parametrize(
-    ["user_name", "user_email", "user_phone", "role", "expected_status"],
+    ["user_name", "user_email", "user_phone", "staff", "role", "expected_status"],
+    [
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "",
+            None,
+            {"client_uid": str(uuid.uuid4()), "role": Role.NORMAL_USER.value},
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user update - role specified with invalid client",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 02081232389",
+            True,
+            None,
+            status.HTTP_201_CREATED,
+            id="Successful create staff user",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 02081232389",
+            None,
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            status.HTTP_201_CREATED,
+            id="Successful create non staff user",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "",
+            None,
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            status.HTTP_201_CREATED,
+            id="Successful new user creation - with role specified",
+        ),
+    ],
+)
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+@patch("user_management.services.mailer.PublisherClient")
+def test_create_gcp_user_as_staff(
+    mock_pubsub,
+    mock_identity_platform,
+    test_client,
+    staff_user_info,
+    test_db_session,
+    sql_factory,
+    user_name,
+    user_email,
+    user_phone,
+    staff,
+    role,
+    expected_status,
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    mock_pubsub = mock_pubsub()
+    client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
+
+    # Add request user to `Client`, so we can assign the role successfully when needed.
+    # sql_factory.client_user.create(user=user_info.user, client=client, role=Role.SUPERUSER)
+
+    body = {
+        "name": user_name,
+        "email": user_email,
+        "phone_number": user_phone,
+    }
+    if staff is not None:
+        body.update({"staff": staff})
+    if role is not None:
+        body.update({"role": role})
+
+    response = test_client.post(
+        "/api/v1/users",
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+        json=body,
+    )
+
+    assert response.status_code == expected_status, response.json()
+    if response.status_code == status.HTTP_201_CREATED:
+        gcp_user_uid = response.json()["uid"]
+        gcp_user = test_db_session.get(GCPUser, gcp_user_uid)
+        assert gcp_user.name == user_name
+        assert gcp_user.email == user_email
+        # User phones normalization.
+        if gcp_user.phone_number is not None:
+            assert gcp_user.phone_number == user_phone.replace(" ", "")
+
+        assert gcp_user.staff == bool(staff)
+
+        if role is not None:
+            # Role passed, and new role created successfully.
+            assert response.json()["clients"] == [
+                {
+                    "client_uid": "f6787d5d-2577-4663-8de6-88b48c679109",
+                    "role": Role.NORMAL_USER.value,
+                }
+            ]
+
+            client_user = test_db_session.scalar(
+                select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
+            )
+            assert client_user is not None
+
+        # Security Token created.
+        token = test_db_session.scalar(select(SecurityToken).filter_by(gcp_user_uid=gcp_user_uid))
+        assert token is not None
+
+        # Welcome email sent.
+        message = {
+            "message_type": "WELCOME",
+            "email": gcp_user.email,
+            "context": {
+                "full_name": gcp_user.name,
+                "link": f"{get_settings().accounts_base_url}/new-user/set-password/{gcp_user.uid}/{token.uid}",
+            },
+        }
+        mock_pubsub.publish.assert_called_with(
+            mock_pubsub.topic_path(), json.dumps(message).encode("utf-8")
+        )
+
+
+@pytest.mark.parametrize(
+    ["user_name", "user_email", "user_phone", "staff", "role", "expected_status"],
     [
         pytest.param(
             "",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             None,
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user creation - No user name",
@@ -36,6 +162,7 @@ from user_management.schemas import GCPUserSchema
             "",
             "+4402081232389",
             None,
+            None,
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user creation - No user email",
         ),
@@ -43,6 +170,7 @@ from user_management.schemas import GCPUserSchema
             "John Doe",
             "john.doe@hummingbirdtech.com",
             "+4402081232389",
+            None,
             {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
             status.HTTP_409_CONFLICT,
             id="Wrong user creation - Duplicated user email",
@@ -51,14 +179,16 @@ from user_management.schemas import GCPUserSchema
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "",
+            None,
             {"client_uid": str(uuid.uuid4()), "role": Role.NORMAL_USER.value},
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_404_NOT_FOUND,
             id="Wrong user update - role specified with invalid client",
         ),
         pytest.param(
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "",
+            None,
             {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": "INVALID_ROLE"},
             status.HTTP_400_BAD_REQUEST,
             id="Wrong user update - role specified with invalid role",
@@ -66,7 +196,35 @@ from user_management.schemas import GCPUserSchema
         pytest.param(
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
+            "",
+            None,
+            None,
+            status.HTTP_404_NOT_FOUND,
+            id="Wrong user update - no role or staff specified",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
             "+44 02081232389",
+            True,
+            {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
+            status.HTTP_400_BAD_REQUEST,
+            id="Cannot send both roles and staff True",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 02081232389",
+            True,
+            None,
+            status.HTTP_404_NOT_FOUND,
+            id="Cannot create staff as non staff user",
+        ),
+        pytest.param(
+            "Jane Doe",
+            "jane.doe@hummingbirdtech.com",
+            "+44 02081232389",
+            None,
             {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
             status.HTTP_201_CREATED,
             id="Successful new user creation",
@@ -75,6 +233,7 @@ from user_management.schemas import GCPUserSchema
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "",
+            None,
             {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
             status.HTTP_201_CREATED,
             id="Successful new user creation - no phone number required",
@@ -83,6 +242,7 @@ from user_management.schemas import GCPUserSchema
             "Jane Doe",
             "jane.doe@hummingbirdtech.com",
             "",
+            None,
             {"client_uid": "f6787d5d-2577-4663-8de6-88b48c679109", "role": Role.NORMAL_USER.value},
             status.HTTP_201_CREATED,
             id="Successful new user creation - with role specified",
@@ -101,21 +261,34 @@ def test_create_gcp_user(
     user_name,
     user_email,
     user_phone,
+    staff,
     role,
     expected_status,
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     mock_pubsub = mock_pubsub()
     client = sql_factory.client.create(uid="f6787d5d-2577-4663-8de6-88b48c679109")
+    client2 = sql_factory.client.create(uid="c6787d5d-2577-4663-8de6-88b48c679109")
     sql_factory.gcp_user.create(email="john.doe@hummingbirdtech.com")
 
     # Add request user to `Client`, so we can assign the role successfully when needed.
     sql_factory.client_user.create(user=user_info.user, client=client, role=Role.SUPERUSER)
+    sql_factory.client_user.create(user=user_info.user, client=client2, role=Role.SUPERUSER)
+
+    body = {
+        "name": user_name,
+        "email": user_email,
+        "phone_number": user_phone,
+    }
+    if staff is not None:
+        body.update({"staff": staff})
+    if role is not None:
+        body.update({"role": role})
 
     response = test_client.post(
         "/api/v1/users",
         headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
-        json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
+        json=body,
     )
 
     assert response.status_code == expected_status, response.json()
@@ -128,14 +301,11 @@ def test_create_gcp_user(
         if gcp_user.phone_number is not None:
             assert gcp_user.phone_number == user_phone.replace(" ", "")
 
+        assert gcp_user.staff == False
+
         if role is not None:
             # Role passed, and new role created successfully.
-            assert response.json()["clients"] == [
-                {
-                    "client_uid": "f6787d5d-2577-4663-8de6-88b48c679109",
-                    "role": Role.NORMAL_USER.value,
-                }
-            ]
+            assert response.json()["clients"] == [role]
 
             client_user = test_db_session.scalar(
                 select(ClientUser).filter_by(gcp_user_uid=gcp_user_uid, client_uid=client.uid)
@@ -390,6 +560,7 @@ def test_update_gcp_user_success(
     mock_identity_platform,
     test_client,
     user_info,
+    staff_user_info,
     test_db_session,
     sql_factory,
     user_uid,
@@ -403,7 +574,7 @@ def test_update_gcp_user_success(
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
         json=patch_payload,
     )
     data = response.json()
@@ -422,8 +593,29 @@ def test_update_gcp_user_success(
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
-def test_update_gcp_user_role_success(
-    mock_identity_platform, test_client, user_info, test_db_session, sql_factory
+def test_update_gcp_user_cannot_edit_other_user(
+    mock_identity_platform, test_client, user_info, sql_factory
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    # GCPUser, already belongs to Client 2.
+    other_user_uid = "d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc"
+    gcp_user = sql_factory.gcp_user.create(uid=other_user_uid)
+    sql_factory.client_user.create(client=user_info.client_2, user=gcp_user, role=Role.PILOT)
+
+    # Update the user to be a member of `client_1` of the request user.
+    response = test_client.patch(
+        f"/api/v1/users/{other_user_uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"name": "New Name"},
+    )
+    data = response.json()
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, data
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_gcp_user_doesnt_remove_roles(
+    mock_identity_platform, test_client, user_info, staff_user_info, test_db_session, sql_factory
 ):
     mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     # GCPUser, already belongs to Client 2.
@@ -433,8 +625,8 @@ def test_update_gcp_user_role_success(
     # Update the user to be a member of `client_1` of the request user.
     response = test_client.patch(
         f"/api/v1/users/{gcp_user.uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
-        json={"role": {"client_uid": str(user_info.client_1.uid), "role": Role.NORMAL_USER.value}},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+        json={"roles": None},
     )
     data = response.json()
 
@@ -445,7 +637,7 @@ def test_update_gcp_user_role_success(
         "email": gcp_user.email,
         "staff": gcp_user.staff,
         "uid": gcp_user.uid,
-        "clients": [{"client_uid": str(user_info.client_1.uid), "role": Role.NORMAL_USER.value}],
+        "clients": [{"client_uid": str(user_info.client_2.uid), "role": Role.PILOT.value}],
     }
 
     # Check that user data was effectively updated in DB. We have now 2 roles for our user: one with
@@ -453,9 +645,66 @@ def test_update_gcp_user_role_success(
     test_db_session.expire_all()
     modified_user = test_db_session.get(GCPUser, gcp_user.uid)
     client_user = test_db_session.scalar(
-        select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=user_info.client_1.uid)
+        select(ClientUser).filter_by(gcp_user_uid=gcp_user.uid, client_uid=user_info.client_2.uid)
     )
-    assert client_user in modified_user.clients
+    assert [client_user] == modified_user.clients
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_gcp_user_role_cant_make_staff(
+    mock_identity_platform, test_client, user_info, sql_factory
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+    # GCPUser, already belongs to Client 2.
+    gcp_user = sql_factory.gcp_user.create(uid="d7a9aa45-1737-419a-bf5c-c2a4ac5b60cc")
+    sql_factory.client_user.create(client=user_info.client_2, user=gcp_user, role=Role.PILOT)
+
+    # Update the user to be a member of `client_1` of the request user.
+    response = test_client.patch(
+        f"/api/v1/users/{gcp_user.uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"staff": True, "role": None},
+    )
+    data = response.json()
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, data
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_gcp_user_role_cant_make_themself_staff(
+    mock_identity_platform, test_client, user_info
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+
+    # Update the user to be a staff member
+    response = test_client.patch(
+        f"/api/v1/users/{user_info.user.uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={"staff": True, "role": None},
+    )
+    data = response.json()
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, data
+
+
+@patch("user_management.services.gcp_user.GCPIdentityPlatformService")
+def test_update_gcp_user_role_cant_promote_themselves(
+    mock_identity_platform, test_client, user_info
+):
+    mock_identity_platform().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
+
+    # Update the user to be a superuser of client2
+    response = test_client.patch(
+        f"/api/v1/users/{user_info.user.uid}",
+        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        json={
+            "staff": False,
+            "role": {"client_uid": str(user_info.client_2.uid), "role": "SUPERUSER"},
+        },
+    )
+    data = response.json()
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, data
 
 
 @pytest.mark.parametrize(
@@ -531,6 +780,7 @@ def test_update_gcp_user_errors(
     mock_identity_platform,
     test_client,
     user_info,
+    staff_user_info,
     test_db_session,
     sql_factory,
     user_uid,
@@ -551,10 +801,14 @@ def test_update_gcp_user_errors(
     # Create a user for the duplicate email error.
     sql_factory.gcp_user.create(email="jane.doe@hummingbirdtech.com")
 
+    body = {"name": user_name, "email": user_email, "phone_number": user_phone}
+    if role is not None:
+        body.update({"role": role})
+
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
-        json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
+        json=body,
     )
 
     assert response.status_code == expected_status, response.json()
@@ -566,6 +820,7 @@ def test_update_gcp_user_errors(
         assert modified_user.name == gcp_user.name
         assert modified_user.email == gcp_user.email
         assert modified_user.phone_number == gcp_user.phone_number
+        assert modified_user.clients == gcp_user.clients
 
 
 @pytest.mark.parametrize(
@@ -641,6 +896,7 @@ def test_update_sync_gcp_user_errors(
     mock_init_gcp_ip_app,  # Mock initializing GCP-IP/Firebase app. pylint: disable=unused-argument
     test_client,
     user_info,
+    staff_user_info,
     test_db_session,
     sql_factory,
     user_uid,
@@ -662,7 +918,7 @@ def test_update_sync_gcp_user_errors(
 
     response = test_client.patch(
         f"/api/v1/users/{user_uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
         json={"name": user_name, "email": user_email, "phone_number": user_phone, "role": role},
     )
 
@@ -859,12 +1115,12 @@ def test_delete_user_with_no_password(
     )
 
 
-def test_delete_client_user(test_client, user_info, test_db_session, sql_factory):
+def test_delete_client_user(test_client, user_info, staff_user_info, test_db_session, sql_factory):
     client_user = sql_factory.client_user.create(client=user_info.client_1)
 
     response = test_client.delete(
         f"/api/v1/users/{client_user.gcp_user_uid}/roles/{user_info.client_1.uid}",
-        headers={"X-Apigateway-Api-Userinfo": user_info.header_payload},
+        headers={"X-Apigateway-Api-Userinfo": staff_user_info.header_payload},
     )
 
     assert response.status_code == status.HTTP_204_NO_CONTENT, response.json()

@@ -106,7 +106,7 @@ def test_create_gcp_user_unauthorized_client(test_client, user_info, sql_factory
         },
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
 
 def test_create_gcp_user_unauthorized_role(test_client, user_info):
@@ -122,7 +122,7 @@ def test_create_gcp_user_unauthorized_role(test_client, user_info):
         },
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
 
 def test_get_gcp_user_success(test_client, user_info, sql_factory):
@@ -180,7 +180,7 @@ def test_get_gcp_user_unauthorized(test_client, user_info, sql_factory):
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
-def test_update_gcp_user_success(mock_gcp_ip, test_client, user_info, test_db_session, sql_factory):
+def test_update_gcp_user_success(mock_gcp_ip, test_client, user_info, sql_factory):
     """Users can update other users if they are `SUPERUSER` role in the same Client."""
     mock_gcp_ip().sync_gcp_user.side_effect = None  # Mock out GCP-IP access.
     client_user = sql_factory.client_user.create(client=user_info.client_1, role=Role.NORMAL_USER)
@@ -198,12 +198,7 @@ def test_update_gcp_user_success(mock_gcp_ip, test_client, user_info, test_db_se
         json=patch_payload,
     )
 
-    assert response.status_code == status.HTTP_200_OK, response.json()
-
-    test_db_session.expire_all()
-    gcp_user = test_db_session.get(GCPUser, client_user.gcp_user_uid)
-    assert gcp_user.name == patch_payload["name"]
-    assert gcp_user.email == patch_payload["email"]
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
 
 @patch("user_management.services.gcp_user.GCPIdentityPlatformService")
@@ -367,16 +362,12 @@ def test_update_role_success(mock_gcp_ip, test_client, user_info, sql_factory, t
         json={"role": {"client_uid": str(user_info.client_1.uid), "role": Role.PILOT.value}},
     )
 
-    assert response.status_code == status.HTTP_200_OK, response.json()
-
-    assert response.json()["clients"] == [
-        {"client_uid": str(user_info.client_1.uid), "role": Role.PILOT.value}
-    ]
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
     test_db_session.expire_all()
     gcp_user = test_db_session.scalar(select(GCPUser).filter_by(uid=client_user.gcp_user_uid))
     assert len(gcp_user.clients) == 1
-    assert gcp_user.clients[0].role == Role.PILOT
+    assert gcp_user.clients[0].role == Role.NORMAL_USER
 
 
 # pylint: disable=unused-argument

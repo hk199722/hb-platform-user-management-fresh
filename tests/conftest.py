@@ -236,7 +236,9 @@ def staff_user_info(sql_factory) -> Generator[RequestUser, None, None]:
 
     Similar to `user_info` fixture, but it delivers a HB Staff user.
     """
-    gcp_user = sql_factory.gcp_user.create(name="Request User", staff=True)
+    gcp_user = sql_factory.gcp_user.create(
+        name="Request User", staff=True, email="staff@hummingbird.com"
+    )
 
     timestamp = int(time())
 

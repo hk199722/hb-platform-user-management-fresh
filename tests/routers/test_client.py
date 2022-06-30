@@ -262,7 +262,7 @@ def test_update_client(
         ),
         pytest.param(
             "2299be00-914a-4efa-96db-0892d9059138",
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_404_NOT_FOUND,
             id="Wrong API token generation - Client does not exist",
         ),
     ],
